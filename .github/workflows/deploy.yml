@@ -54,4 +54,5 @@ jobs:
           script: |
             cd /var/www/breww-backend/
             npm install
-            pm2 restart server
+            pm2 restart server || pm2 start server.js --name "server"
+            pm2 save
