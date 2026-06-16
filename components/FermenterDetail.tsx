@@ -169,17 +169,16 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
   };
 
   // Calculations
-  const currentGravity = Number(fermenter.currentDevice?.gravity || 0);
-  const actualOG = Number(fermenter.active_batch_og || 0);
-  const actualFG = Number(fermenter.active_batch_fg || 0);
+  const og = Number(fermenter.active_batch_og || 1.050); // Fallback para evitar divisão por zero
+  const sg = Number(fermenter.currentDevice?.gravity || 0);
 
-  const abv = (actualOG > 1.000 && currentGravity >= 1.000 && actualOG > currentGravity) 
-    ? ((actualOG - currentGravity) * 131.25) 
-    : 0;
-  
-  const currentAttenuation = (actualOG > 1.000 && currentGravity >= 1.000 && actualOG > currentGravity) 
-    ? ((actualOG - currentGravity) / (actualOG - 1.000)) * 100 
-    : 0;
+  // Cálculo da Atenuação (Apenas se SG > 0 e OG > 1)
+  // Fórmula: ((OG - SG) / (OG - 1)) * 100
+  const currentAttenuation = (sg > 0 && og > 1) ? ((og - sg) / (og - 1)) * 100 : 0;
+
+  // Cálculo do ABV
+  // Fórmula: (OG - SG) * 131.25
+  const currentAbv = (og > sg && sg > 0) ? (og - sg) * 131.25 : 0;
 
 
   const getStepTimeRemaining = () => {
@@ -396,7 +395,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                     <div className="flex-1">
                         <GravityChart 
                             data={fermenter.readings} 
-                            og={actualOG} 
+                            og={og} 
                             fg={fermenter.active_batch_fg || 0} 
                             events={fermenter.status === FermenterStatus.IDLE ? [] : fermenter.events} 
                         />
@@ -429,7 +428,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                                 <span className="text-neutral-600 text-sm mb-1">Gravidade (SG)</span>
                                 <div className="flex items-center gap-1">
                                     <span className="text-4xl font-light text-purple-400 font-mono">
-                                        {safeFixed(fermenter.currentDevice?.gravity, 3)}
+                                        {safeFixed(sg, 3)}
                                     </span>
                                 </div>
                             </div>
@@ -465,7 +464,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                             <div className="text-center">
                                 <ArrowDown size={16} className="text-neutral-600 mx-auto mb-2" />
                                 <span className="block text-[10px] font-bold text-neutral-600 uppercase mb-1">OG</span>
-                                <span className="block text-sm font-mono text-white">{safeFixed(actualOG, 3)}</span>
+                                <span className="block text-sm font-mono text-white">{safeFixed(og, 3)}</span>
                             </div>
                             <div className="text-center">
                                 <Target size={16} className="text-neutral-600 mx-auto mb-2" />
@@ -475,12 +474,12 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                             <div className="text-center">
                                 <Percent size={16} className="text-neutral-600 mx-auto mb-2" />
                                 <span className="block text-[10px] font-bold text-neutral-600 uppercase mb-1">Atenuação</span>
-                                <span className="block text-sm font-mono text-white">{safeFixed(currentAttenuation, 0)}%</span>
+                                <span className="block text-sm font-mono text-white">{safeFixed(currentAttenuation, 1)}%</span>
                             </div>
                             <div className="text-center">
                                 <FlaskConical size={16} className="text-neutral-600 mx-auto mb-2" />
                                 <span className="block text-[10px] font-bold text-neutral-600 uppercase mb-1">ABV Est.</span>
-                                <span className="block text-sm font-mono text-white">{safeFixed(abv, 1)}%</span>
+                                <span className="block text-sm font-mono text-white">{safeFixed(currentAbv, 1)}%</span>
                             </div>
                         </div>
                     </div>
@@ -498,7 +497,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                                 style={fermenter.style}
                                 volume={fermenter.volume}
                                 startDate={fermenter.startDate}
-                                og={actualOG}
+                                og={og}
                                 fg={fermenter.active_batch_fg || 0}
                                 onUpdateSteps={handleUpdateSteps}
                                 onUpdateGravity={handleUpdateGravity}
