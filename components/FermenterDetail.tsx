@@ -35,56 +35,6 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
   const [events, setEvents] = useState<FermentationEvent[]>(fermenter.events || []);
   const [isReady, setIsReady] = useState(false);
 
-  const parsedProfile = React.useMemo(() => {
-      let tempParsed = [];
-      const rawProfile = fermenter.active_batch_profile || fermenter.profile;
-      
-      if (typeof rawProfile === 'string') {
-          try { 
-              tempParsed = JSON.parse(rawProfile); 
-          } catch (e) { 
-              console.error("Erro no parse do perfil", e); 
-          }
-      } else if (Array.isArray(rawProfile)) {
-          tempParsed = rawProfile;
-      } else if (rawProfile && typeof rawProfile === 'object' && rawProfile.steps) {
-          tempParsed = rawProfile.steps;
-      }
-      
-      const stepsArray = tempParsed.steps || tempParsed;
-      if (Array.isArray(stepsArray)) {
-          return stepsArray.map((s: any, idx: number) => ({
-              id: s.id || String(idx),
-              name: s.n || s.name || `Rampa ${idx + 1}`,
-              temperature: s.t !== undefined ? s.t : (s.temperature || 0),
-              duration: s.d !== undefined ? s.d : (s.duration || 0)
-          }));
-      }
-      return [];
-  }, [fermenter.profile, fermenter.active_batch_profile]);
-
-  // Garanta que a interface receba o array final
-  fermenter.profile = parsedProfile;
-
-  const chartData = React.useMemo(() => {
-      let dataToSlice = [...readings];
-      
-      // Merge live data from MQTT
-      if (fermenter.status !== FermenterStatus.IDLE && fermenter.currentDevice) {
-         dataToSlice.push({
-             timestamp: fermenter.currentDevice.lastUpdate || new Date().toISOString(),
-             beerTemp: fermenter.currentDevice.temperature,
-             targetTemp: fermenter.targetTemp,
-             gravity: fermenter.currentDevice.gravity,
-         } as any);
-      }
-
-      if (settings.chartPoints > 0) {
-          return dataToSlice.slice(-settings.chartPoints);
-      }
-      return dataToSlice;
-  }, [readings, settings.chartPoints, fermenter.currentDevice, fermenter.targetTemp, fermenter.status]);
-
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsReady(true);
@@ -393,6 +343,21 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
     return 'text-red-500';
   };
 
+  const safeProfile = React.useMemo(() => {
+    let raw = fermenter.profile || (fermenter as any).active_batch_profile || (fermenter.currentDevice as any)?.steps || [];
+    if (typeof raw === 'string') {
+        try { raw = JSON.parse(raw); } catch(e) { raw = []; }
+    }
+    if (!Array.isArray(raw)) return [];
+    
+    return raw.map((step: any, index: number) => ({
+        id: step.id || String(index),
+        name: step.name || step.n || 'Rampa',
+        temperature: parseFloat(step.temperature ?? step.t ?? 0),
+        duration: parseFloat(step.duration ?? step.d ?? 0)
+    }));
+  }, [fermenter.profile, fermenter.currentDevice]);
+
   return (
     <div className="p-6 md:p-8 w-full animate-in fade-in duration-500">
       {/* Header Section Clean */}
@@ -566,7 +531,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                 {isReady ? (
                     <div style={{ minHeight: '300px', width: '100%', display: 'block' }}>
                         <TemperatureChart 
-                            data={chartData} 
+                            data={[...(fermenter.readings || [])]} 
                             events={fermenter.status === FermenterStatus.IDLE ? [] : events} 
                             onAddEvent={handleAddEvent}
                             onRemoveEvent={handleRemoveEvent}
@@ -582,7 +547,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                     isReady ? (
                         <div style={{ minHeight: '300px', width: '100%', display: 'block' }}>
                             <GravityChart 
-                                data={chartData} 
+                                data={[...(fermenter.readings || [])]} 
                                 og={og} 
                                 fg={fermenter.active_batch_fg || 0} 
                                 events={fermenter.status === FermenterStatus.IDLE ? [] : events} 
@@ -684,7 +649,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                             <FermentationWizard onStartFermentation={handleStartFermentation} />
                         ) : (
                             <FermentationProfile 
-                                steps={parsedProfile} 
+                                steps={safeProfile} 
                                 currentStepIndex={fermenter.currentStepIndex || 0}
                                 isPaused={fermenter.isPaused || false}
                                 style={fermenter.style}
