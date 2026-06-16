@@ -405,8 +405,33 @@ app.get('/api/batch/:id/data', authenticateToken, async (req, res) => {
     try {
         const [check] = await pool.execute(`SELECT b.id FROM batches b JOIN devices d ON b.device_id = d.id WHERE b.id = ? AND d.user_id = ?`, [req.params.id, req.user.id]);
         if (check.length === 0) return res.status(403).json({ error: 'Não autorizado' });
-        const [rows] = await pool.execute(`SELECT temp_ferm, temp_amb, target_temp, gravity, recorded_at, step_name FROM telemetry WHERE batch_id = ? ORDER BY recorded_at ASC`, [req.params.id]);
-        res.json(rows);
+        
+        // Amostragem: 1 leitura a cada 10 minutos (UNIX_TIMESTAMP DIV 600) para evitar FATAL ERROR: Reached heap limit
+        const [rows] = await pool.execute(`
+            SELECT 
+                AVG(temp_ferm) as temp_ferm, 
+                AVG(temp_amb) as temp_amb, 
+                AVG(target_temp) as target_temp, 
+                AVG(gravity) as gravity, 
+                MIN(recorded_at) as recorded_at, 
+                MAX(step_name) as step_name 
+            FROM telemetry 
+            WHERE batch_id = ? 
+            GROUP BY (UNIX_TIMESTAMP(recorded_at) DIV 600)
+            ORDER BY recorded_at ASC
+        `, [req.params.id]);
+
+        // Formatar valores e purificar payload para reduzir o peso do JSON
+        const safeRows = rows.map(r => ({
+            temp_ferm: r.temp_ferm !== null ? Number(Number(r.temp_ferm).toFixed(2)) : null,
+            temp_amb: r.temp_amb !== null ? Number(Number(r.temp_amb).toFixed(2)) : null,
+            target_temp: r.target_temp !== null ? Number(Number(r.target_temp).toFixed(2)) : null,
+            gravity: r.gravity !== null ? Number(Number(r.gravity).toFixed(4)) : null,
+            recorded_at: r.recorded_at,
+            step_name: r.step_name
+        }));
+
+        res.json(safeRows);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
