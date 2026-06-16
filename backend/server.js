@@ -178,7 +178,7 @@ app.get('/api/public/batch/:token', async (req, res) => {
     try {
         // 1. Busca Lote e Device
         const [batches] = await pool.execute(
-            `SELECT b.id, b.name, b.style, b.started_at, b.ended_at, b.is_active, b.og, b.fg, d.device_name 
+            `SELECT b.id, b.name, b.style, b.started_at, b.ended_at, b.is_active, b.og, b.fg, b.profile, d.device_name 
              FROM batches b 
              JOIN devices d ON b.device_id = d.id 
              WHERE b.public_token = ?`, 
@@ -213,7 +213,7 @@ app.get('/api/public/batch/:token', async (req, res) => {
 
 app.get('/api/devices', authenticateToken, async (req, res) => {
     try {
-        const [rows] = await pool.execute(`SELECT d.*, (d.last_seen > NOW() - INTERVAL 2 MINUTE) as is_online, b.id as active_batch_id, b.name as active_batch_name, b.og as active_batch_og, b.fg as active_batch_fg FROM devices d LEFT JOIN batches b ON b.device_id = d.id AND b.is_active = 1 WHERE d.user_id = ?`, [req.user.id]);
+        const [rows] = await pool.execute(`SELECT d.*, (d.last_seen > NOW() - INTERVAL 2 MINUTE) as is_online, b.id as active_batch_id, b.name as active_batch_name, b.og as active_batch_og, b.fg as active_batch_fg, b.profile as active_batch_profile FROM devices d LEFT JOIN batches b ON b.device_id = d.id AND b.is_active = 1 WHERE d.user_id = ?`, [req.user.id]);
         res.json(rows);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -386,7 +386,7 @@ app.get('/api/export/:serial', authenticateToken, async (req, res) => {
 });
 
 app.get('/api/batches', authenticateToken, async (req, res) => {
-    try { const [rows] = await pool.execute(`SELECT b.id, b.name, b.style, b.started_at, b.ended_at, b.is_active, d.device_name FROM batches b JOIN devices d ON b.device_id = d.id WHERE d.user_id = ? ORDER BY b.started_at DESC`, [req.user.id]); res.json(rows); } catch (err) { res.status(500).json({ error: err.message }); }
+    try { const [rows] = await pool.execute(`SELECT b.id, b.name, b.style, b.started_at, b.ended_at, b.is_active, b.profile, d.device_name FROM batches b JOIN devices d ON b.device_id = d.id WHERE d.user_id = ? ORDER BY b.started_at DESC`, [req.user.id]); res.json(rows); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.delete('/api/batches/:id', authenticateToken, async (req, res) => {
