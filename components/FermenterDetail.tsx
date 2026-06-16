@@ -387,6 +387,9 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
     });
 }, [fermenter.currentDevice, fermenter.targetTemp, fermenter.currentFridgeTemp]);
 
+  const chartLimit = parseInt(localStorage.getItem('breww_chartPoints') || '50', 10);
+  const slicedReadings = chartLimit > 0 ? localReadings.slice(-chartLimit) : localReadings;
+
   return (
     <div className="p-6 md:p-8 w-full animate-in fade-in duration-500">
       {/* Header Section Clean */}
@@ -560,7 +563,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                 {isReady ? (
                     <div style={{ minHeight: '300px', width: '100%', display: 'block' }}>
                         <TemperatureChart 
-                            data={localReadings} 
+                            data={slicedReadings} 
                             events={fermenter.status === FermenterStatus.IDLE ? [] : events} 
                             onAddEvent={handleAddEvent}
                             onRemoveEvent={handleRemoveEvent}
@@ -576,7 +579,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                     isReady ? (
                         <div style={{ minHeight: '300px', width: '100%', display: 'block' }}>
                             <GravityChart 
-                                data={localReadings} 
+                                data={slicedReadings} 
                                 og={og} 
                                 fg={fermenter.active_batch_fg || 0} 
                                 events={fermenter.status === FermenterStatus.IDLE ? [] : events} 
