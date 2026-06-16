@@ -71,36 +71,41 @@ export const BrewProvider: React.FC<{ children: React.ReactNode }> = ({ children
           queryClient.setQueryData<Fermenter[]>(['fermenters'], (old) => {
             if (!old) return [];
             return old.map((f) => {
-              if (f.ipAddress === serialCode || f.id === serialCode) {
-                let status = f.status;
-                if (payload.statOp === 'FERMENT') status = FermenterStatus.ACTIVE;
-                else if (payload.statOp === 'CRASH') status = FermenterStatus.COLD_CRASH;
-                else if (payload.statOp === 'IDLE') status = FermenterStatus.IDLE;
-
-                let mode = f.mode;
-                if (payload.opm === 0) mode = DeviceMode.FERMENTER;
-                else if (payload.opm === 1) mode = DeviceMode.FRIDGE;
-                else if (payload.opm === 2) mode = DeviceMode.KEGERATOR;
-
-                return {
-                  ...f,
-                  mode,
-                  status,
-                  targetTemp: (payload.opm === 0 ? payload.fsm : payload.csp) ?? f.targetTemp,
-                  currentFridgeTemp: payload.amb ?? f.currentFridgeTemp,
-                  currentStepIndex: payload.currStep ?? f.currentStepIndex,
-                  currentDevice: {
-                    ...f.currentDevice,
-                    gravity: payload.is_sg ?? f.currentDevice?.gravity,
-                    temperature: payload.ferm ?? f.currentDevice?.temperature,
-                    battery: payload.is_bat ?? f.currentDevice?.battery,
-                    angle: payload.angle ?? f.currentDevice?.angle,
-                    rssi: payload.rssi ?? f.currentDevice?.rssi,
-                    lastUpdate: new Date().toISOString()
-                  }
-                };
+              // Se não for o fermentador da mensagem, retorna ele intacto
+              if (f.ipAddress !== serialCode && f.id !== serialCode) {
+                return f;
               }
-              return f;
+
+              let status = f.status;
+              if (payload.statOp === 'FERMENT') status = FermenterStatus.ACTIVE;
+              else if (payload.statOp === 'CRASH') status = FermenterStatus.COLD_CRASH;
+              else if (payload.statOp === 'IDLE') status = FermenterStatus.IDLE;
+
+              let mode = f.mode;
+              if (payload.opm === 0) mode = DeviceMode.FERMENTER;
+              else if (payload.opm === 1) mode = DeviceMode.FRIDGE;
+              else if (payload.opm === 2) mode = DeviceMode.KEGERATOR;
+
+              // Bloco de segurança: garante que currentDevice sempre exista antes de ler
+              const updatedDevice = {
+                ...(f.currentDevice || {}),
+                gravity: payload.is_sg ?? f.currentDevice?.gravity ?? 0,
+                temperature: payload.ferm ?? f.currentDevice?.temperature ?? 0,
+                battery: payload.is_bat ?? f.currentDevice?.battery ?? 0,
+                angle: payload.angle ?? f.currentDevice?.angle ?? 0,
+                rssi: payload.rssi ?? f.currentDevice?.rssi ?? 0,
+                lastUpdate: new Date().toISOString()
+              };
+
+              return {
+                ...f,
+                mode,
+                status,
+                targetTemp: (payload.opm === 0 ? payload.fsm : payload.csp) ?? f.targetTemp ?? 20,
+                currentFridgeTemp: payload.amb ?? f.currentFridgeTemp ?? 20,
+                currentStepIndex: payload.currStep ?? f.currentStepIndex ?? 0,
+                currentDevice: updatedDevice
+              };
             });
           });
         }
