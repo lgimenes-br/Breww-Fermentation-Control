@@ -157,6 +157,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
              const now = new Date().getTime();
              const isOnline = lastUpdate > 0 && !isNaN(lastUpdate) && (now - lastUpdate) < 30 * 60 * 1000;
 
+             let safeTarget = parseFloat(String(f.targetTemp || 0));
+             if (f.mode === DeviceMode.FERMENTER && f.profile && f.profile[f.currentStepIndex]) {
+                 const currentStep = f.profile[f.currentStepIndex];
+                 const stepTemp = currentStep.temperature ?? currentStep.t;
+                 if (stepTemp !== undefined) {
+                     safeTarget = parseFloat(String(stepTemp));
+                 }
+             }
+
              // Lógica dinâmica de Status/Modo/Badge
              let statusLabel = 'Inativo';
              let dotColor = "bg-neutral-500";
@@ -166,7 +175,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
              if (f.mode === DeviceMode.FERMENTER) {
                  if (f.status !== FermenterStatus.IDLE) {
                     if (f.profile && f.profile.length > 0 && f.currentStepIndex < f.profile.length) {
-                        statusLabel = f.profile[f.currentStepIndex].name;
+                        const currentStep = f.profile[f.currentStepIndex];
+                        statusLabel = currentStep.name || currentStep.n || `Rampa ${f.currentStepIndex + 1}`;
                     } else {
                         statusLabel = f.status;
                     }
@@ -267,7 +277,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
                                 <div className="h-0.5 w-8 bg-neutral-700 rounded-full overflow-hidden">
                                    <div className={`h-full w-1/2 ${f.mode === DeviceMode.KEGERATOR ? 'bg-amber-500' : 'bg-neutral-400'}`}></div>
                                 </div>
-                                <span className="text-xs text-neutral-500 font-mono">Alvo: {safeFixed(f.targetTemp, 1)}°</span>
+                                <span className="text-xs text-neutral-500 font-mono">Alvo: {safeFixed(safeTarget, 1)}°</span>
                              </div>
                              {/* Sub-metric: Fridge */}
                              <div className="flex items-center gap-1.5">
