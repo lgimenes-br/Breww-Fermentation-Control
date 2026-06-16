@@ -89,10 +89,10 @@ export const BrewProvider: React.FC<{ children: React.ReactNode }> = ({ children
               // Bloco de segurança: garante que currentDevice sempre exista antes de ler
               const updatedDevice = {
                 ...(f.currentDevice || {}),
-                gravity: payload.is_sg ?? f.currentDevice?.gravity ?? 0,
-                temperature: payload.ferm ?? f.currentDevice?.temperature ?? 0,
-                battery: payload.is_bat ?? f.currentDevice?.battery ?? 0,
-                angle: payload.angle ?? f.currentDevice?.angle ?? 0,
+                gravity: payload.gravity ?? payload.sg ?? payload.is_sg ?? f.currentDevice?.gravity ?? 0,
+                temperature: payload.temperature ?? payload.ferm ?? f.currentDevice?.temperature ?? 0,
+                battery: payload.battery ?? payload.is_bat ?? f.currentDevice?.battery ?? 0,
+                angle: payload.tilt ?? payload.angle ?? payload.is_a ?? f.currentDevice?.angle ?? 0,
                 rssi: payload.rssi ?? f.currentDevice?.rssi ?? 0,
                 lastUpdate: new Date().toISOString()
               };

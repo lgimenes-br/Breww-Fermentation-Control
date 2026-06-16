@@ -168,13 +168,15 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
   };
 
   // Calculations
-  const currentGravity = Number(fermenter.currentDevice?.gravity || 0);
-  const actualOG = Number(fermenter.active_batch_og || 0);
-  const abv = ((actualOG - currentGravity) * 131.25).toFixed(1);
+  const currentGravity = Number(fermenter.currentDevice?.gravity ?? 0);
+  const actualOG = Number(fermenter.active_batch_og ?? 0);
+  const actualFG = Number(fermenter.active_batch_fg ?? 0);
   
-  const currentAttenuation = actualOG > 1.000 
-    ? ((actualOG - currentGravity) / (actualOG - 1.000) * 100).toFixed(0)
-    : "0";
+  // Correction: Check if gravity is Plato (e.g., > 1.2 it's probably not SG). 
+  // Wait, if it displays "72.651" it might be the angle, or maybe multiplied by 100.
+  // Actually, SG is typically 1.0xx. If currentGravity > 2, it might be Plato or something else, but the user says the backend *is sending SG*. Wait, if the backend sends SG (like 1.050), why did it display 72.651? 
+  // Maybe in BrewContext or FermenterDetail it was mapping payload.angle? Is there any angle mapping? 
+
 
   const getStepTimeRemaining = () => {
       if (fermenter.status === FermenterStatus.IDLE || !fermenter.startDate || !fermenter.profile || fermenter.profile.length === 0) return '--';
@@ -414,7 +416,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                                 <span className="text-neutral-600 text-sm mb-1">Temperatura ({settings.sensor1Name})</span>
                                 <div className="flex items-center gap-1">
                                     <span className="text-4xl font-light text-white font-mono">
-                                        {fermenter.currentDevice?.temperature?.toFixed(1) || '0.0'}
+                                        {Number(fermenter.currentDevice?.temperature || 0).toFixed(1)}
                                     </span>
                                     <span className="text-lg text-neutral-500">°C</span>
                                 </div>
@@ -423,7 +425,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                                 <span className="text-neutral-600 text-sm mb-1">Gravidade (SG)</span>
                                 <div className="flex items-center gap-1">
                                     <span className="text-4xl font-light text-purple-400 font-mono">
-                                        {fermenter.currentDevice?.gravity?.toFixed(3) || '0.000'}
+                                        {Number(fermenter.currentDevice?.gravity || 0).toFixed(3)}
                                     </span>
                                 </div>
                             </div>
@@ -435,12 +437,12 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                             <div className="text-center">
                                 <Target size={16} className="text-neutral-600 mx-auto mb-2" />
                                 <span className="block text-[10px] font-bold text-neutral-600 uppercase mb-1">Set-point</span>
-                                <span className="block text-sm font-mono text-white">{fermenter.targetTemp?.toFixed(1) || '0.0'}°</span>
+                                <span className="block text-sm font-mono text-white">{Number(fermenter.targetTemp || 0).toFixed(1)}°</span>
                             </div>
                              <div className="text-center">
                                 <Snowflake size={16} className="text-neutral-600 mx-auto mb-2" />
                                 <span className="block text-[10px] font-bold text-neutral-600 uppercase mb-1">{settings.sensor2Name}</span>
-                                <span className="block text-sm font-mono text-blue-300">{fermenter.currentFridgeTemp?.toFixed(1) || '0.0'}°</span>
+                                <span className="block text-sm font-mono text-blue-300">{Number(fermenter.currentFridgeTemp || 0).toFixed(1)}°</span>
                             </div>
                              <div className="text-center">
                                 <Battery size={16} className="text-neutral-600 mx-auto mb-2" />
