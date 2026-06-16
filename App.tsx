@@ -158,11 +158,14 @@ const App: React.FC = () => {
   const navBtnActive = "border-neutral-400 text-white bg-white/5";
 
   // Status Logic for the Active Fermenter
-  const isOnline = selectedFermenter && 
-    (new Date().getTime() - new Date(selectedFermenter.currentDevice.lastUpdate).getTime()) < 30 * 60 * 1000;
+  const lastUpdateStr = selectedFermenter?.currentDevice?.lastUpdate;
+  const lastUpdateMs = lastUpdateStr ? new Date(lastUpdateStr).getTime() : 0;
+  const isOnline = selectedFermenter && lastUpdateMs > 0 &&
+    (new Date().getTime() - lastUpdateMs) < 30 * 60 * 1000;
   
-  const isCooling = selectedFermenter && selectedFermenter.currentFridgeTemp < selectedFermenter.currentDevice.temperature - 0.2;
-  const isHeating = selectedFermenter && selectedFermenter.currentFridgeTemp > selectedFermenter.currentDevice.temperature + 0.2;
+  const currentTemp = selectedFermenter?.currentDevice?.temperature || 0;
+  const isCooling = selectedFermenter && selectedFermenter.currentFridgeTemp < currentTemp - 0.2;
+  const isHeating = selectedFermenter && selectedFermenter.currentFridgeTemp > currentTemp + 0.2;
 
   const showBackButton = currentView !== 'DASHBOARD' || selectedFermenterId !== null;
 

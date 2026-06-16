@@ -168,10 +168,11 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
   };
 
   // Calculations
-  const abv = ((fermenter.og - fermenter.currentDevice.gravity) * 131.25).toFixed(1);
+  const currentGravity = fermenter.currentDevice?.gravity || 0;
+  const abv = ((fermenter.og - currentGravity) * 131.25).toFixed(1);
   
   const currentAttenuation = fermenter.og > 1.000 
-    ? ((fermenter.og - fermenter.currentDevice.gravity) / (fermenter.og - 1.000) * 100).toFixed(0)
+    ? ((fermenter.og - currentGravity) / (fermenter.og - 1.000) * 100).toFixed(0)
     : "0";
 
   const getStepTimeRemaining = () => {
@@ -212,7 +213,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
         <div className="w-full mb-12 flex justify-between items-start">
             <div>
                 <div className="flex items-center gap-3 mb-1">
-                    <span className={`w-2 h-2 rounded-full ${fermenter.currentDevice.lastUpdate ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500'} animate-pulse`}></span>
+                    <span className={`w-2 h-2 rounded-full ${fermenter.currentDevice?.lastUpdate ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500'} animate-pulse`}></span>
                     <span className="text-xs font-mono text-neutral-500 uppercase tracking-widest">{fermenter.name}</span>
                 </div>
                 <h1 className="text-5xl md:text-6xl font-black text-white tracking-tighter min-h-[60px]">
@@ -234,7 +235,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                 
                 <div className="flex items-start gap-2 mb-8">
                     <span className="text-8xl md:text-9xl font-black text-white tracking-tighter tabular-nums">
-                        {fermenter.currentDevice.temperature.toFixed(1)}
+                        {fermenter.currentDevice?.temperature?.toFixed(1) || '0.0'}
                     </span>
                     <span className="text-4xl text-neutral-600 font-light mt-4">°C</span>
                 </div>
@@ -410,7 +411,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                                 <span className="text-neutral-600 text-sm mb-1">Temperatura ({settings.sensor1Name})</span>
                                 <div className="flex items-center gap-1">
                                     <span className="text-4xl font-light text-white font-mono">
-                                        {fermenter.currentDevice.temperature.toFixed(1)}
+                                        {fermenter.currentDevice?.temperature?.toFixed(1) || '0.0'}
                                     </span>
                                     <span className="text-lg text-neutral-500">°C</span>
                                 </div>
@@ -419,7 +420,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                                 <span className="text-neutral-600 text-sm mb-1">Gravidade (SG)</span>
                                 <div className="flex items-center gap-1">
                                     <span className="text-4xl font-light text-purple-400 font-mono">
-                                        {fermenter.currentDevice.gravity.toFixed(3)}
+                                        {fermenter.currentDevice?.gravity?.toFixed(3) || '0.000'}
                                     </span>
                                 </div>
                             </div>
@@ -431,18 +432,18 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                             <div className="text-center">
                                 <Target size={16} className="text-neutral-600 mx-auto mb-2" />
                                 <span className="block text-[10px] font-bold text-neutral-600 uppercase mb-1">Set-point</span>
-                                <span className="block text-sm font-mono text-white">{fermenter.targetTemp.toFixed(1)}°</span>
+                                <span className="block text-sm font-mono text-white">{fermenter.targetTemp?.toFixed(1) || '0.0'}°</span>
                             </div>
                              <div className="text-center">
                                 <Snowflake size={16} className="text-neutral-600 mx-auto mb-2" />
                                 <span className="block text-[10px] font-bold text-neutral-600 uppercase mb-1">{settings.sensor2Name}</span>
-                                <span className="block text-sm font-mono text-blue-300">{fermenter.currentFridgeTemp.toFixed(1)}°</span>
+                                <span className="block text-sm font-mono text-blue-300">{fermenter.currentFridgeTemp?.toFixed(1) || '0.0'}°</span>
                             </div>
                              <div className="text-center">
                                 <Battery size={16} className="text-neutral-600 mx-auto mb-2" />
                                 <span className="block text-[10px] font-bold text-neutral-600 uppercase mb-1">Bateria</span>
-                                <span className={`block text-sm font-mono ${getBatteryColor(fermenter.currentDevice.battery)}`}>
-                                    {fermenter.currentDevice.battery > 0 ? `${fermenter.currentDevice.battery}V` : '--'}
+                                <span className={`block text-sm font-mono ${getBatteryColor(fermenter.currentDevice?.battery || 0)}`}>
+                                    {(fermenter.currentDevice?.battery || 0) > 0 ? `${fermenter.currentDevice?.battery}V` : '--'}
                                 </span>
                             </div>
                              <div className="text-center">

@@ -121,7 +121,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
       <header className="mb-10 flex flex-col md:flex-row md:items-end justify-end gap-4">
         <div className="flex flex-col md:items-end gap-2">
             <div className="text-xs text-neutral-600 font-mono mb-1">
-                {fermenters.length} UNIDADES CONECTADAS
+                {fermenters?.length || 0} UNIDADES CONECTADAS
             </div>
             <div className="flex items-center gap-2">
                 <button 
@@ -144,11 +144,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {fermenters.map((f) => {
+        {(!fermenters || fermenters.length === 0) && (
+             <div className="col-span-full py-10 text-center text-neutral-500">
+                  Nenhum dispositivo encontrado.
+             </div>
+        )}
+        {fermenters?.map((f) => {
              // Check connectivity
-             const lastUpdate = new Date(f.currentDevice.lastUpdate).getTime();
+             const lastUpdateStr = f.currentDevice?.lastUpdate;
+             const lastUpdate = lastUpdateStr ? new Date(lastUpdateStr).getTime() : 0;
              const now = new Date().getTime();
-             const isOnline = !isNaN(lastUpdate) && (now - lastUpdate) < 30 * 60 * 1000;
+             const isOnline = lastUpdate > 0 && !isNaN(lastUpdate) && (now - lastUpdate) < 30 * 60 * 1000;
 
              // Lógica dinâmica de Status/Modo/Badge
              let statusLabel = 'Inativo';
@@ -251,7 +257,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
                     <div className="flex flex-col">
                         <div className="flex items-start gap-1">
                             <span className="text-5xl font-light tracking-tighter text-white">
-                                {f.currentDevice.temperature.toFixed(1)}
+                                {f.currentDevice?.temperature?.toFixed(1) || '0.0'}
                             </span>
                             <span className="text-lg text-neutral-500 font-light mt-1">°C</span>
                         </div>
@@ -260,12 +266,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
                                 <div className="h-0.5 w-8 bg-neutral-700 rounded-full overflow-hidden">
                                    <div className={`h-full w-1/2 ${f.mode === DeviceMode.KEGERATOR ? 'bg-amber-500' : 'bg-neutral-400'}`}></div>
                                 </div>
-                                <span className="text-xs text-neutral-500 font-mono">Alvo: {f.targetTemp.toFixed(1)}°</span>
+                                <span className="text-xs text-neutral-500 font-mono">Alvo: {f.targetTemp?.toFixed(1) || '0.0'}°</span>
                              </div>
                              {/* Sub-metric: Fridge */}
                              <div className="flex items-center gap-1.5">
                                   <Thermometer size={12} className="text-neutral-600" />
-                                  <span className="text-xs text-neutral-500">{settings.sensor2Name}: {f.currentFridgeTemp.toFixed(1)}°</span>
+                                  <span className="text-xs text-neutral-500">{settings.sensor2Name}: {f.currentFridgeTemp?.toFixed(1) || '0.0'}°</span>
                              </div>
                         </div>
                     </div>
@@ -276,12 +282,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
                             <>
                                 <div className="flex items-start justify-end gap-1">
                                     <span className="text-4xl font-light tracking-tighter text-purple-200">
-                                        {f.currentDevice.gravity.toFixed(3)}
+                                        {f.currentDevice?.gravity?.toFixed(3) || '0.000'}
                                     </span>
                                     <span className="text-lg text-neutral-500 font-light mt-1">SG</span>
                                 </div>
                                 <span className="text-xs text-neutral-500 uppercase tracking-wider block mt-2">
-                                    OG: {f.og.toFixed(3)}
+                                    OG: {f.og?.toFixed(3) || '0.000'}
                                 </span>
                             </>
                         ) : (
@@ -298,7 +304,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
                     <div className="flex gap-4">
                         <div className="flex items-center gap-1.5 text-neutral-600 group-hover:text-neutral-400 transition-colors" title="Sinal Wifi">
                             <Wifi size={14} />
-                            <span className="text-xs font-mono">{f.currentDevice.rssi}</span>
+                            <span className="text-xs font-mono">{f.currentDevice?.rssi || 0}</span>
                         </div>
                     </div>
 
