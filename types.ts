@@ -72,26 +72,30 @@ export interface KegeratorConfig {
 }
 
 export interface Fermenter {
-  id: string;
-  name: string;
-  ipAddress?: string; // IP ou Serial do dispositivo
-  mode: DeviceMode; // Novo campo: Modo de Operação
-  status: FermenterStatus;
-  beerName: string;
-  style: BeerStyle;
-  startDate: string;
-  og: number; // Original Gravity
-  fg: number; // Target Final Gravity (Estimated)
-  volume: number; // Liters
-  targetTemp: number;
-  readings: Reading[];
-  currentDevice: ISpindelData;
-  currentFridgeTemp: number; // Ambient/Fridge Temperature
-  profile: FermentationStep[]; // Lista de rampas
-  currentStepIndex: number; // Índice da rampa ativa
-  isPaused: boolean; // Controle de pausa do perfil
-  events?: FermentationEvent[]; // New field for logged events
-  kegeratorConfig?: KegeratorConfig; // Configurações específicas da choppeira
+  id: number;
+  user_id?: number;
+  device_name: string;
+  serial_code: string;
+  created_at?: string;
+  last_seen?: string;
+  is_online?: number | boolean;
+  active_batch_id?: number | null;
+  active_batch_name?: string | null;
+  active_batch_og?: number | null;
+  active_batch_fg?: number | null;
+  mode?: DeviceMode; 
+  status?: FermenterStatus;
+  style?: BeerStyle;
+  volume?: number; 
+  targetTemp?: number;
+  readings?: Reading[];
+  currentDevice?: ISpindelData;
+  currentFridgeTemp?: number; 
+  profile?: FermentationStep[]; 
+  currentStepIndex?: number; 
+  isPaused?: boolean; 
+  events?: FermentationEvent[]; 
+  kegeratorConfig?: KegeratorConfig; 
 }
 
 export interface FinishedBrew {

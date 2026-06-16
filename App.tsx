@@ -24,7 +24,7 @@ const App: React.FC = () => {
   const [authView, setAuthView] = useState<AuthState>('LOGIN');
   const [currentView, setCurrentView] = useState<ViewState>('DASHBOARD');
   const [previousView, setPreviousView] = useState<ViewState | null>(null);
-  const [selectedFermenterId, setSelectedFermenterId] = useState<string | null>(null);
+  const [selectedFermenterId, setSelectedFermenterId] = useState<number | null>(null);
   const [selectedBrew, setSelectedBrew] = useState<FinishedBrew | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isModeMenuOpen, setIsModeMenuOpen] = useState(false);
@@ -57,7 +57,7 @@ const App: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleUpdateFermenter = (id: string, updates: Partial<Fermenter>) => {
+  const handleUpdateFermenter = (id: number, updates: Partial<Fermenter>) => {
     const f = fermenters.find(f => f.id === id);
     if (f) {
       // Optmistic local update
@@ -72,7 +72,7 @@ const App: React.FC = () => {
          if (currentMode === DeviceMode.FRIDGE) opm = 1;
          if (currentMode === DeviceMode.KEGERATOR) opm = 2;
 
-         handleTriggerUpdate(f.ipAddress || f.id, {
+         handleTriggerUpdate(f.serial_code || String(f.id), {
             type: 'SET_TEMP',
             target: updates.targetTemp ?? f.targetTemp,
             opm
@@ -88,8 +88,8 @@ const App: React.FC = () => {
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         
         await axios.post(`${url}/api/devices`, {
-            serialCode: newDevice.ipAddress,
-            name: newDevice.name || 'Novo Dispositivo'
+            serialCode: newDevice.serial_code,
+            name: newDevice.device_name || 'Novo Dispositivo'
         }, { headers });
 
         refetchFermenters();
@@ -98,7 +98,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleDeleteFermenter = async (id: string) => {
+  const handleDeleteFermenter = async (id: number) => {
     const f = fermenters.find(f => f.id === id);
     if (!f) return;
     try {
@@ -106,7 +106,7 @@ const App: React.FC = () => {
         const token = localStorage.getItem('token');
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-        await axios.delete(`${url}/api/devices/${f.ipAddress || f.id}`, { headers });
+        await axios.delete(`${url}/api/devices/${f.serial_code || f.id}`, { headers });
         
         queryClient.setQueryData<Fermenter[]>(['fermenters'], (old) => old ? old.filter(item => item.id !== id) : []);
         if (selectedFermenterId === id) {

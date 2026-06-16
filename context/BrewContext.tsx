@@ -72,7 +72,7 @@ export const BrewProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (!old) return [];
             return old.map((f) => {
               // Se não for o fermentador da mensagem, retorna ele intacto
-              if (f.ipAddress !== serialCode && f.id !== serialCode) {
+              if (f.serial_code !== serialCode && String(f.id) !== serialCode) {
                 return f;
               }
 

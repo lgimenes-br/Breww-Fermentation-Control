@@ -45,7 +45,7 @@ export const InsightModal: React.FC<InsightModalProps> = ({ isOpen, onClose, ins
       });
       
       pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-      pdf.save(`breww-ai-${fermenter.beerName.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+      pdf.save(`breww-ai-${(fermenter.active_batch_name || 'cerveja').replace(/\s+/g, '-').toLowerCase()}.pdf`);
     } catch (err) {
       console.error('Erro ao gerar PDF', err);
     } finally {
@@ -54,7 +54,7 @@ export const InsightModal: React.FC<InsightModalProps> = ({ isOpen, onClose, ins
   };
 
   const handleWhatsAppShare = () => {
-    const text = `🍺 *Análise BREWW.AI - ${fermenter.beerName}*\nEstilo: ${fermenter.style}\n\n📊 *Indicadores:*\n• Saúde: ${insight.healthScore}/100\n• FG Prevista: ${insight.predictedFG.toFixed(3)}\n• Estimativa: ${insight.estimatedDaysRemaining} dias restantes\n\n📝 *Resumo:*\n${insight.summary}\n\n✅ *Recomendações:*\n${insight.recommendations.map(r => `• ${r}`).join('\n')}`;
+    const text = `🍺 *Análise BREWW.AI - ${fermenter.active_batch_name || 'Sem nome'}*\nEstilo: ${fermenter.style}\n\n📊 *Indicadores:*\n• Saúde: ${insight.healthScore}/100\n• FG Prevista: ${insight.predictedFG.toFixed(3)}\n• Estimativa: ${insight.estimatedDaysRemaining} dias restantes\n\n📝 *Resumo:*\n${insight.summary}\n\n✅ *Recomendações:*\n${insight.recommendations.map(r => `• ${r}`).join('\n')}`;
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   };
@@ -104,7 +104,7 @@ export const InsightModal: React.FC<InsightModalProps> = ({ isOpen, onClose, ins
             </div>
             <div>
               <h2 className="text-xl font-bold text-white">Análise BREWW.AI</h2>
-              <p className="text-sm text-neutral-400">{fermenter.beerName} • {fermenter.style}</p>
+              <p className="text-sm text-neutral-400">{fermenter.active_batch_name || 'Sem nome'} • {fermenter.style}</p>
             </div>
           </div>
           

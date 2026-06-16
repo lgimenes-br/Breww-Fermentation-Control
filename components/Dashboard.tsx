@@ -6,10 +6,10 @@ import { useSettings } from '../SettingsContext';
 import { useBrewContext } from '../context/BrewContext';
 
 interface DashboardProps {
-  onSelectFermenter: (id: string) => void;
-  onUpdateFermenter: (id: string, updates: Partial<Fermenter>) => void;
+  onSelectFermenter: (id: number) => void;
+  onUpdateFermenter: (id: number, updates: Partial<Fermenter>) => void;
   onAddFermenter: (fermenter: Partial<Fermenter>) => void;
-  onDeleteFermenter: (id: string) => void;
+  onDeleteFermenter: (id: number) => void;
 }
 
 interface ScannedDevice {
@@ -22,12 +22,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
   const { settings } = useSettings();
   const { fermenters, handleTriggerUpdate } = useBrewContext();
   // Edit States
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
   const [editIp, setEditIp] = useState('');
 
   // Delete State
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   // Add Manual States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -44,11 +44,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
   const handleEditClick = (e: React.MouseEvent, fermenter: Fermenter) => {
     e.stopPropagation(); // Prevent opening the detail view
     setEditingId(fermenter.id);
-    setEditName((fermenter as any).device_name || fermenter.name);
-    setEditIp((fermenter as any).serial_code || fermenter.ipAddress || '');
+    setEditName(fermenter.device_name || 'Dispositivo Sem Nome');
+    setEditIp(fermenter.serial_code || '');
   };
 
-  const handleDeleteClick = (e: React.MouseEvent, id: string) => {
+  const handleDeleteClick = (e: React.MouseEvent, id: number) => {
       e.stopPropagation();
       setDeletingId(id);
   };
@@ -63,9 +63,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
   const handleSaveEdit = () => {
     if (editingId) {
         onUpdateFermenter(editingId, {
-            name: editName,
-            ipAddress: editIp
-        });
+            device_name: editName,
+            serial_code: editIp
+        } as Partial<Fermenter>);
         setEditingId(null);
     }
   };
@@ -74,9 +74,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
   const handleManualAdd = () => {
       if (newDeviceName && newDeviceIp) {
           onAddFermenter({
-              name: newDeviceName,
-              ipAddress: newDeviceIp
-          });
+              device_name: newDeviceName,
+              serial_code: newDeviceIp
+          } as Partial<Fermenter>);
           setIsAddModalOpen(false);
           setNewDeviceName('');
           setNewDeviceIp('');
@@ -107,9 +107,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
   const handleSaveScanned = () => {
       if (deviceToAddFromScan && newDeviceName) {
           onAddFermenter({
-              name: newDeviceName,
-              ipAddress: deviceToAddFromScan.ip
-          });
+              device_name: newDeviceName,
+              serial_code: deviceToAddFromScan.ip
+          } as Partial<Fermenter>);
           setIsScanModalOpen(false);
           setDeviceToAddFromScan(null);
           setScannedDevices([]);
@@ -202,10 +202,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
                 <div className="flex justify-between items-start mb-6">
                     <div>
                         <span className="block text-xs font-bold text-neutral-400 uppercase tracking-widest">
-                            {(f as any).device_name || f.name || 'Dispositivo Sem Nome'}
+                            {f.device_name || 'Dispositivo Sem Nome'}
                         </span>
                         <span className="block text-[10px] font-mono text-neutral-600 mt-1">
-                            {(f as any).serial_code || f.ipAddress || 'ID_UNKNOWN'}
+                            {f.serial_code || 'ID_UNKNOWN'}
                         </span>
                     </div>
                     
@@ -239,7 +239,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
                 <div className="mb-8">
                     {/* Beer Name */}
                     <h2 className="text-2xl font-bold text-white group-hover:text-white transition-colors truncate mb-3 tracking-tight">
-                        {(f as any).active_batch_name || f.beerName || (f.mode === DeviceMode.KEGERATOR ? 'Barril de Chopp' : 'Vazio')}
+                        {f.active_batch_name || (f.mode === DeviceMode.KEGERATOR ? 'Barril de Chopp' : 'Vazio')}
                     </h2>
 
                     {/* Smart Status Badge: Reflete o modo e a rampa atual */}
@@ -257,7 +257,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
                     <div className="flex flex-col">
                         <div className="flex items-start gap-1">
                             <span className="text-5xl font-light tracking-tighter text-white">
-                                {f.currentDevice?.temperature?.toFixed(1) || '0.0'}
+                                {Number(f.currentDevice?.temperature || 0).toFixed(1)}
                             </span>
                             <span className="text-lg text-neutral-500 font-light mt-1">°C</span>
                         </div>
@@ -266,12 +266,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
                                 <div className="h-0.5 w-8 bg-neutral-700 rounded-full overflow-hidden">
                                    <div className={`h-full w-1/2 ${f.mode === DeviceMode.KEGERATOR ? 'bg-amber-500' : 'bg-neutral-400'}`}></div>
                                 </div>
-                                <span className="text-xs text-neutral-500 font-mono">Alvo: {f.targetTemp?.toFixed(1) || '0.0'}°</span>
+                                <span className="text-xs text-neutral-500 font-mono">Alvo: {Number(f.targetTemp || 0).toFixed(1)}°</span>
                              </div>
                              {/* Sub-metric: Fridge */}
                              <div className="flex items-center gap-1.5">
                                   <Thermometer size={12} className="text-neutral-600" />
-                                  <span className="text-xs text-neutral-500">{settings.sensor2Name}: {f.currentFridgeTemp?.toFixed(1) || '0.0'}°</span>
+                                  <span className="text-xs text-neutral-500">{settings.sensor2Name}: {Number(f.currentFridgeTemp || 0).toFixed(1)}°</span>
                              </div>
                         </div>
                     </div>
@@ -282,12 +282,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
                             <>
                                 <div className="flex items-start justify-end gap-1">
                                     <span className="text-4xl font-light tracking-tighter text-purple-200">
-                                        {f.currentDevice?.gravity?.toFixed(3) || '0.000'}
+                                        {Number(f.currentDevice?.gravity || 0).toFixed(3)}
                                     </span>
                                     <span className="text-lg text-neutral-500 font-light mt-1">SG</span>
                                 </div>
                                 <span className="text-xs text-neutral-500 uppercase tracking-wider block mt-2">
-                                    OG: {((f as any).active_batch_og ?? f.og)?.toFixed(3) || '0.000'}
+                                    OG: {Number(f.active_batch_og || 0).toFixed(3)}
                                 </span>
                             </>
                         ) : (

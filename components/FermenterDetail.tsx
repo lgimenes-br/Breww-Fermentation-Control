@@ -59,7 +59,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
           events: []
       });
 
-      handleTriggerUpdate(fermenter.ipAddress || fermenter.id, {
+      handleTriggerUpdate(fermenter.serial_code || String(fermenter.id), {
           type: 'SET_TEMP',
           target,
           opm: 0
@@ -99,7 +99,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
         const target = fermenter.profile[nextIndex].temperature;
         onUpdate(fermenter.id, { currentStepIndex: nextIndex, targetTemp: target });
         
-        handleTriggerUpdate(fermenter.ipAddress || fermenter.id, {
+        handleTriggerUpdate(fermenter.serial_code || String(fermenter.id), {
             type: 'SET_TEMP',
             target,
             opm: 0
@@ -113,7 +113,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
         const target = fermenter.profile[prevIndex].temperature;
         onUpdate(fermenter.id, { currentStepIndex: prevIndex, targetTemp: target });
 
-        handleTriggerUpdate(fermenter.ipAddress || fermenter.id, {
+        handleTriggerUpdate(fermenter.serial_code || String(fermenter.id), {
             type: 'SET_TEMP',
             target,
             opm: 0
@@ -137,7 +137,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
           profile: []
       });
 
-      handleTriggerUpdate(fermenter.ipAddress || fermenter.id, {
+      handleTriggerUpdate(fermenter.serial_code || String(fermenter.id), {
           type: 'SET_TEMP',
           target: lastStepTemp,
           opm: 0
@@ -159,7 +159,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
       if (fermenter.mode === DeviceMode.FRIDGE) opm = 1;
       if (fermenter.mode === DeviceMode.KEGERATOR) opm = 2;
 
-      handleTriggerUpdate(fermenter.ipAddress || fermenter.id, {
+      handleTriggerUpdate(fermenter.serial_code || String(fermenter.id), {
           type: 'SET_TEMP',
           target: newTemp,
           opm
@@ -168,8 +168,8 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
   };
 
   // Calculations
-  const currentGravity = fermenter.currentDevice?.gravity || 0;
-  const actualOG = (fermenter as any).active_batch_og ?? fermenter.og ?? 0;
+  const currentGravity = Number(fermenter.currentDevice?.gravity || 0);
+  const actualOG = Number(fermenter.active_batch_og || 0);
   const abv = ((actualOG - currentGravity) * 131.25).toFixed(1);
   
   const currentAttenuation = actualOG > 1.000 
@@ -216,11 +216,11 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                 <div className="flex items-center gap-3 mb-1">
                     <span className={`w-2 h-2 rounded-full ${fermenter.currentDevice?.lastUpdate ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500'} animate-pulse`}></span>
                     <span className="text-xs font-mono text-neutral-500 uppercase tracking-widest">
-                        {(fermenter as any).device_name || fermenter.name || 'Dispositivo Sem Nome'}
+                        {fermenter.device_name || 'Dispositivo Sem Nome'}
                     </span>
                 </div>
                 <h1 className="text-5xl md:text-6xl font-black text-white tracking-tighter min-h-[60px]">
-                    {fermenter.status === FermenterStatus.IDLE ? '' : ((fermenter as any).active_batch_name || fermenter.beerName || 'Sem Nome')}
+                    {fermenter.status === FermenterStatus.IDLE ? '' : (fermenter.active_batch_name || 'Sem Nome')}
                 </h1>
             </div>
         </div>
@@ -238,7 +238,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                 
                 <div className="flex items-start gap-2 mb-8">
                     <span className="text-8xl md:text-9xl font-black text-white tracking-tighter tabular-nums">
-                        {fermenter.currentDevice?.temperature?.toFixed(1) || '0.0'}
+                        {Number(fermenter.currentDevice?.temperature || 0).toFixed(1)}
                     </span>
                     <span className="text-4xl text-neutral-600 font-light mt-4">°C</span>
                 </div>
@@ -391,7 +391,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                         <GravityChart 
                             data={fermenter.readings} 
                             og={actualOG} 
-                            fg={fermenter.fg} 
+                            fg={fermenter.active_batch_fg || 0} 
                             events={fermenter.status === FermenterStatus.IDLE ? [] : fermenter.events} 
                         />
                     </div>
@@ -464,7 +464,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                             <div className="text-center">
                                 <Target size={16} className="text-neutral-600 mx-auto mb-2" />
                                 <span className="block text-[10px] font-bold text-neutral-600 uppercase mb-1">Meta FG</span>
-                                <span className="block text-sm font-mono text-white">{fermenter.fg ? fermenter.fg.toFixed(3) : '-'}</span>
+                                <span className="block text-sm font-mono text-white">{fermenter.active_batch_fg ? Number(fermenter.active_batch_fg).toFixed(3) : '-'}</span>
                             </div>
                             <div className="text-center">
                                 <Percent size={16} className="text-neutral-600 mx-auto mb-2" />
@@ -493,7 +493,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                                 volume={fermenter.volume}
                                 startDate={fermenter.startDate}
                                 og={actualOG}
-                                fg={fermenter.fg}
+                                fg={fermenter.active_batch_fg || 0}
                                 onUpdateSteps={handleUpdateSteps}
                                 onUpdateGravity={handleUpdateGravity}
                                 onTogglePause={handleTogglePause}
@@ -513,7 +513,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
       {/* System Info Box */}
       <div className="mt-6 w-full bg-neutral-900/30 border border-neutral-800/50 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-center text-[10px] font-mono text-neutral-500 uppercase tracking-widest gap-2">
           <span>VER: V1.0.017 SAFE-BOOT STABLE</span>
-          <span>IP: {fermenter.ipAddress || '192.168.68.106'}</span>
+          <span>IP: {fermenter.serial_code || '192.168.68.106'}</span>
       </div>
     </div>
   );
