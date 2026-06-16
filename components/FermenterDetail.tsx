@@ -387,7 +387,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
     });
 }, [fermenter.currentDevice, fermenter.targetTemp, fermenter.currentFridgeTemp]);
 
-  const chartLimit = parseInt(localStorage.getItem('breww_chartPoints') || '50', 10);
+  const chartLimit = settings?.chartPoints || 50;
   const slicedReadings = chartLimit > 0 ? localReadings.slice(-chartLimit) : localReadings;
 
   return (
