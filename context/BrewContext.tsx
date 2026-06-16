@@ -36,7 +36,7 @@ export const BrewProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return [];
       }
     },
-    staleTime: 1000 * 60 * 5, // 5 min
+    staleTime: 1000 * 60 * 5,
   });
 
   useEffect(() => {
@@ -50,12 +50,8 @@ export const BrewProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     client.on('connect', () => {
       console.log('Connected to MQTT Broker via WebSocket');
-      client.subscribe('brewbrother/+/data', (err) => {
-        if (!err) console.log('Subscribed to brewbrother/+/data');
-      });
-      client.subscribe('brewbrother/global/update', (err) => {
-        if (!err) console.log('Subscribed to global updates');
-      });
+      client.subscribe('brewbrother/+/data');
+      client.subscribe('brewbrother/global/update');
     });
 
     client.on('message', (topic, message) => {
@@ -75,7 +71,6 @@ export const BrewProvider: React.FC<{ children: React.ReactNode }> = ({ children
           queryClient.setQueryData<Fermenter[]>(['fermenters'], (old) => {
             if (!old) return [];
             return old.map((f) => {
-              // Match by ipAddress acting as serial/MAC or id
               if (f.ipAddress === serialCode || f.id === serialCode) {
                 let status = f.status;
                 if (payload.statOp === 'FERMENT') status = FermenterStatus.ACTIVE;
@@ -96,11 +91,11 @@ export const BrewProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   currentStepIndex: payload.currStep ?? f.currentStepIndex,
                   currentDevice: {
                     ...f.currentDevice,
-                    gravity: payload.is_sg ?? f.currentDevice.gravity,
-                    temperature: payload.ferm ?? f.currentDevice.temperature,
-                    battery: payload.is_bat ?? f.currentDevice.battery,
-                    angle: payload.angle ?? f.currentDevice.angle,
-                    rssi: payload.rssi ?? f.currentDevice.rssi,
+                    gravity: payload.is_sg ?? f.currentDevice?.gravity,
+                    temperature: payload.ferm ?? f.currentDevice?.temperature,
+                    battery: payload.is_bat ?? f.currentDevice?.battery,
+                    angle: payload.angle ?? f.currentDevice?.angle,
+                    rssi: payload.rssi ?? f.currentDevice?.rssi,
                     lastUpdate: new Date().toISOString()
                   }
                 };
@@ -124,9 +119,8 @@ export const BrewProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const handleTriggerUpdate = (serialCode: string, payload: any) => {
     if (mqttClient && mqttClient.connected) {
       mqttClient.publish(`brewbrother/${serialCode}/comando`, JSON.stringify(payload));
-      console.log(`Sent command to brewbrother/${serialCode}/comando`, payload);
     } else {
-      console.warn('MQTT Client not connected. Cannot send command.', payload);
+      console.warn('MQTT Client not connected.');
     }
   };
 
