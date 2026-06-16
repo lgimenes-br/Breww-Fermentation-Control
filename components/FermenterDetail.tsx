@@ -36,34 +36,54 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
   const [isReady, setIsReady] = useState(false);
 
   const parsedProfile = React.useMemo(() => {
-      if (fermenter.profile && fermenter.profile.length > 0) return fermenter.profile;
+      let tempParsed = [];
+      const rawProfile = fermenter.active_batch_profile || fermenter.profile;
       
-      const rawProfile = fermenter.active_batch_profile;
-      if (!rawProfile) return [];
-      
-      try {
-          const parsed = typeof rawProfile === 'string' ? JSON.parse(rawProfile) : rawProfile;
-          const stepsArray = parsed.steps || parsed;
-          if (Array.isArray(stepsArray)) {
-              return stepsArray.map((s: any, idx: number) => ({
-                  id: s.id || String(idx),
-                  name: s.n || s.name || `Rampa ${idx + 1}`,
-                  temperature: s.t !== undefined ? s.t : (s.temperature || 0),
-                  duration: s.d !== undefined ? s.d : (s.duration || 0)
-              }));
+      if (typeof rawProfile === 'string') {
+          try { 
+              tempParsed = JSON.parse(rawProfile); 
+          } catch (e) { 
+              console.error("Erro no parse do perfil", e); 
           }
-      } catch(e) {
-          console.error("Failed to parse active_batch_profile", e);
+      } else if (Array.isArray(rawProfile)) {
+          tempParsed = rawProfile;
+      } else if (rawProfile && typeof rawProfile === 'object' && rawProfile.steps) {
+          tempParsed = rawProfile.steps;
+      }
+      
+      const stepsArray = tempParsed.steps || tempParsed;
+      if (Array.isArray(stepsArray)) {
+          return stepsArray.map((s: any, idx: number) => ({
+              id: s.id || String(idx),
+              name: s.n || s.name || `Rampa ${idx + 1}`,
+              temperature: s.t !== undefined ? s.t : (s.temperature || 0),
+              duration: s.d !== undefined ? s.d : (s.duration || 0)
+          }));
       }
       return [];
   }, [fermenter.profile, fermenter.active_batch_profile]);
 
+  // Garanta que a interface receba o array final
+  fermenter.profile = parsedProfile;
+
   const chartData = React.useMemo(() => {
-      if (settings.chartPoints > 0) {
-          return readings.slice(-settings.chartPoints);
+      let dataToSlice = [...readings];
+      
+      // Merge live data from MQTT
+      if (fermenter.status !== FermenterStatus.IDLE && fermenter.currentDevice) {
+         dataToSlice.push({
+             timestamp: fermenter.currentDevice.lastUpdate || new Date().toISOString(),
+             beerTemp: fermenter.currentDevice.temperature,
+             targetTemp: fermenter.targetTemp,
+             gravity: fermenter.currentDevice.gravity,
+         } as any);
       }
-      return readings;
-  }, [readings, settings.chartPoints]);
+
+      if (settings.chartPoints > 0) {
+          return dataToSlice.slice(-settings.chartPoints);
+      }
+      return dataToSlice;
+  }, [readings, settings.chartPoints, fermenter.currentDevice, fermenter.targetTemp, fermenter.status]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
