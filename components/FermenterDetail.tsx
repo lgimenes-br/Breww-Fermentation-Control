@@ -505,7 +505,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
             
             {/* Left Column: Charts & Events */}
             <div className="lg:col-span-2 space-y-4 min-w-0 flex flex-col order-2 lg:order-1">
-                <div className="flex-1">
+                <div className="flex-1" style={{ minHeight: '300px', width: '100%' }}>
                     <TemperatureChart 
                         data={readings} 
                         events={fermenter.status === FermenterStatus.IDLE ? [] : events} 
@@ -515,7 +515,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                 </div>
 
                 {fermenter.mode === DeviceMode.FERMENTER && (
-                    <div className="flex-1">
+                    <div className="flex-1" style={{ minHeight: '300px', width: '100%' }}>
                         <GravityChart 
                             data={readings} 
                             og={og} 

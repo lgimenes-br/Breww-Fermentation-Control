@@ -43,6 +43,7 @@ export const BrewProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     },
     staleTime: 1000 * 60 * 5,
+    retry: false,
   });
 
   useEffect(() => {
