@@ -44,8 +44,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
   const handleEditClick = (e: React.MouseEvent, fermenter: Fermenter) => {
     e.stopPropagation(); // Prevent opening the detail view
     setEditingId(fermenter.id);
-    setEditName(fermenter.name);
-    setEditIp(fermenter.ipAddress || '');
+    setEditName((fermenter as any).device_name || fermenter.name);
+    setEditIp((fermenter as any).serial_code || fermenter.ipAddress || '');
   };
 
   const handleDeleteClick = (e: React.MouseEvent, id: string) => {
@@ -202,10 +202,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
                 <div className="flex justify-between items-start mb-6">
                     <div>
                         <span className="block text-xs font-bold text-neutral-400 uppercase tracking-widest">
-                            {f.name}
+                            {(f as any).device_name || f.name || 'Dispositivo Sem Nome'}
                         </span>
                         <span className="block text-[10px] font-mono text-neutral-600 mt-1">
-                            {f.ipAddress || 'ID_UNKNOWN'}
+                            {(f as any).serial_code || f.ipAddress || 'ID_UNKNOWN'}
                         </span>
                     </div>
                     
@@ -239,7 +239,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
                 <div className="mb-8">
                     {/* Beer Name */}
                     <h2 className="text-2xl font-bold text-white group-hover:text-white transition-colors truncate mb-3 tracking-tight">
-                        {f.beerName || (f.mode === DeviceMode.KEGERATOR ? 'Barril de Chopp' : 'Vazio')}
+                        {(f as any).active_batch_name || f.beerName || (f.mode === DeviceMode.KEGERATOR ? 'Barril de Chopp' : 'Vazio')}
                     </h2>
 
                     {/* Smart Status Badge: Reflete o modo e a rampa atual */}
@@ -287,7 +287,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
                                     <span className="text-lg text-neutral-500 font-light mt-1">SG</span>
                                 </div>
                                 <span className="text-xs text-neutral-500 uppercase tracking-wider block mt-2">
-                                    OG: {f.og?.toFixed(3) || '0.000'}
+                                    OG: {((f as any).active_batch_og ?? f.og)?.toFixed(3) || '0.000'}
                                 </span>
                             </>
                         ) : (

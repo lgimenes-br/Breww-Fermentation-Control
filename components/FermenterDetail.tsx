@@ -169,10 +169,11 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
 
   // Calculations
   const currentGravity = fermenter.currentDevice?.gravity || 0;
-  const abv = ((fermenter.og - currentGravity) * 131.25).toFixed(1);
+  const actualOG = (fermenter as any).active_batch_og ?? fermenter.og ?? 0;
+  const abv = ((actualOG - currentGravity) * 131.25).toFixed(1);
   
-  const currentAttenuation = fermenter.og > 1.000 
-    ? ((fermenter.og - currentGravity) / (fermenter.og - 1.000) * 100).toFixed(0)
+  const currentAttenuation = actualOG > 1.000 
+    ? ((actualOG - currentGravity) / (actualOG - 1.000) * 100).toFixed(0)
     : "0";
 
   const getStepTimeRemaining = () => {
@@ -214,10 +215,12 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
             <div>
                 <div className="flex items-center gap-3 mb-1">
                     <span className={`w-2 h-2 rounded-full ${fermenter.currentDevice?.lastUpdate ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500'} animate-pulse`}></span>
-                    <span className="text-xs font-mono text-neutral-500 uppercase tracking-widest">{fermenter.name}</span>
+                    <span className="text-xs font-mono text-neutral-500 uppercase tracking-widest">
+                        {(fermenter as any).device_name || fermenter.name || 'Dispositivo Sem Nome'}
+                    </span>
                 </div>
                 <h1 className="text-5xl md:text-6xl font-black text-white tracking-tighter min-h-[60px]">
-                    {fermenter.status === FermenterStatus.IDLE ? '' : (fermenter.beerName || 'Sem Nome')}
+                    {fermenter.status === FermenterStatus.IDLE ? '' : ((fermenter as any).active_batch_name || fermenter.beerName || 'Sem Nome')}
                 </h1>
             </div>
         </div>
@@ -387,7 +390,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                     <div className="flex-1">
                         <GravityChart 
                             data={fermenter.readings} 
-                            og={fermenter.og} 
+                            og={actualOG} 
                             fg={fermenter.fg} 
                             events={fermenter.status === FermenterStatus.IDLE ? [] : fermenter.events} 
                         />
@@ -456,7 +459,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                             <div className="text-center">
                                 <ArrowDown size={16} className="text-neutral-600 mx-auto mb-2" />
                                 <span className="block text-[10px] font-bold text-neutral-600 uppercase mb-1">OG</span>
-                                <span className="block text-sm font-mono text-white">{fermenter.og.toFixed(3)}</span>
+                                <span className="block text-sm font-mono text-white">{actualOG.toFixed(3)}</span>
                             </div>
                             <div className="text-center">
                                 <Target size={16} className="text-neutral-600 mx-auto mb-2" />
@@ -489,7 +492,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                                 style={fermenter.style}
                                 volume={fermenter.volume}
                                 startDate={fermenter.startDate}
-                                og={fermenter.og}
+                                og={actualOG}
                                 fg={fermenter.fg}
                                 onUpdateSteps={handleUpdateSteps}
                                 onUpdateGravity={handleUpdateGravity}
