@@ -1,3 +1,4 @@
+import { safeFixed } from '../utils/format';
 
 import React, { useState, useEffect } from 'react';
 import { Fermenter, FermenterStatus, FermentationStep, DeviceMode, FermentationEvent, KegeratorConfig } from '../types';
@@ -47,7 +48,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
       onUpdate(fermenter.id, {
           profile: steps,
           beerName,
-          style: style as any,
+          style,
           volume,
           og,
           fg,
@@ -154,7 +155,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
   };
 
   const handleSetPointChange = (delta: number) => {
-      const newTemp = Number((fermenter.targetTemp + delta).toFixed(1));
+      const newTemp = Number(safeFixed(fermenter.targetTemp + delta, 1));
       let opm = 0;
       if (fermenter.mode === DeviceMode.FRIDGE) opm = 1;
       if (fermenter.mode === DeviceMode.KEGERATOR) opm = 2;
@@ -241,7 +242,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                 
                 <div className="flex items-start gap-2 mb-8">
                     <span className="text-8xl md:text-9xl font-black text-white tracking-tighter tabular-nums">
-                        {Number(fermenter.currentDevice?.temperature || 0).toFixed(1)}
+                        {safeFixed(fermenter.currentDevice?.temperature, 1)}
                     </span>
                     <span className="text-4xl text-neutral-600 font-light mt-4">°C</span>
                 </div>
@@ -264,7 +265,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                     </div>
                     <div className="flex flex-col">
                         <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Set-Point</span>
-                        <span className="text-2xl font-mono text-green-500">{Number(fermenter.targetTemp || 0).toFixed(1)}°C</span>
+                        <span className="text-2xl font-mono text-green-500">{safeFixed(fermenter.targetTemp, 1)}°C</span>
                     </div>
                 </div>
              </div>
@@ -417,7 +418,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                                 <span className="text-neutral-600 text-sm mb-1">Temperatura ({settings.sensor1Name})</span>
                                 <div className="flex items-center gap-1">
                                     <span className="text-4xl font-light text-white font-mono">
-                                        {Number(fermenter.currentDevice?.temperature || 0).toFixed(1)}
+                                        {safeFixed(fermenter.currentDevice?.temperature, 1)}
                                     </span>
                                     <span className="text-lg text-neutral-500">°C</span>
                                 </div>
@@ -426,7 +427,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                                 <span className="text-neutral-600 text-sm mb-1">Gravidade (SG)</span>
                                 <div className="flex items-center gap-1">
                                     <span className="text-4xl font-light text-purple-400 font-mono">
-                                        {Number(fermenter.currentDevice?.gravity || 0).toFixed(3)}
+                                        {safeFixed(fermenter.currentDevice?.gravity, 3)}
                                     </span>
                                 </div>
                             </div>
@@ -438,12 +439,12 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                             <div className="text-center">
                                 <Target size={16} className="text-neutral-600 mx-auto mb-2" />
                                 <span className="block text-[10px] font-bold text-neutral-600 uppercase mb-1">Set-point</span>
-                                <span className="block text-sm font-mono text-white">{Number(fermenter.targetTemp || 0).toFixed(1)}°</span>
+                                <span className="block text-sm font-mono text-white">{safeFixed(fermenter.targetTemp, 1)}°</span>
                             </div>
                              <div className="text-center">
                                 <Snowflake size={16} className="text-neutral-600 mx-auto mb-2" />
                                 <span className="block text-[10px] font-bold text-neutral-600 uppercase mb-1">{settings.sensor2Name}</span>
-                                <span className="block text-sm font-mono text-blue-300">{Number(fermenter.currentFridgeTemp || 0).toFixed(1)}°</span>
+                                <span className="block text-sm font-mono text-blue-300">{safeFixed(fermenter.currentFridgeTemp, 1)}°</span>
                             </div>
                              <div className="text-center">
                                 <Battery size={16} className="text-neutral-600 mx-auto mb-2" />
@@ -462,22 +463,22 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                             <div className="text-center">
                                 <ArrowDown size={16} className="text-neutral-600 mx-auto mb-2" />
                                 <span className="block text-[10px] font-bold text-neutral-600 uppercase mb-1">OG</span>
-                                <span className="block text-sm font-mono text-white">{Number(actualOG || 0).toFixed(3)}</span>
+                                <span className="block text-sm font-mono text-white">{safeFixed(actualOG, 3)}</span>
                             </div>
                             <div className="text-center">
                                 <Target size={16} className="text-neutral-600 mx-auto mb-2" />
                                 <span className="block text-[10px] font-bold text-neutral-600 uppercase mb-1">Meta FG</span>
-                                <span className="block text-sm font-mono text-white">{fermenter.active_batch_fg ? Number(fermenter.active_batch_fg).toFixed(3) : '-'}</span>
+                                <span className="block text-sm font-mono text-white">{fermenter.active_batch_fg ? safeFixed(fermenter.active_batch_fg, 3) : '-'}</span>
                             </div>
                             <div className="text-center">
                                 <Percent size={16} className="text-neutral-600 mx-auto mb-2" />
                                 <span className="block text-[10px] font-bold text-neutral-600 uppercase mb-1">Atenuação</span>
-                                <span className="block text-sm font-mono text-white">{Number(currentAttenuation || 0).toFixed(0)}%</span>
+                                <span className="block text-sm font-mono text-white">{safeFixed(currentAttenuation, 0)}%</span>
                             </div>
                             <div className="text-center">
                                 <FlaskConical size={16} className="text-neutral-600 mx-auto mb-2" />
                                 <span className="block text-[10px] font-bold text-neutral-600 uppercase mb-1">ABV Est.</span>
-                                <span className="block text-sm font-mono text-white">{Number(abv || 0).toFixed(1)}%</span>
+                                <span className="block text-sm font-mono text-white">{safeFixed(abv, 1)}%</span>
                             </div>
                         </div>
                     </div>

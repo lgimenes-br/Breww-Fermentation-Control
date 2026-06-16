@@ -1,3 +1,4 @@
+import { safeFixed } from '../utils/format';
 import React, { useRef, useState } from 'react';
 import { X, Activity, TrendingDown, Clock, AlertTriangle, CheckCircle2, Info, Sparkles, Download, MessageCircle, Loader2 } from 'lucide-react';
 import { BrewingInsightData, Fermenter } from '../types';
@@ -54,7 +55,7 @@ export const InsightModal: React.FC<InsightModalProps> = ({ isOpen, onClose, ins
   };
 
   const handleWhatsAppShare = () => {
-    const text = `🍺 *Análise BREWW.AI - ${fermenter.active_batch_name || 'Sem nome'}*\nEstilo: ${fermenter.style}\n\n📊 *Indicadores:*\n• Saúde: ${insight.healthScore}/100\n• FG Prevista: ${insight.predictedFG.toFixed(3)}\n• Estimativa: ${insight.estimatedDaysRemaining} dias restantes\n\n📝 *Resumo:*\n${insight.summary}\n\n✅ *Recomendações:*\n${insight.recommendations.map(r => `• ${r}`).join('\n')}`;
+    const text = `🍺 *Análise BREWW.AI - ${fermenter.active_batch_name || 'Sem nome'}*\nEstilo: ${fermenter.style}\n\n📊 *Indicadores:*\n• Saúde: ${insight.healthScore}/100\n• FG Prevista: ${safeFixed(insight.predictedFG, 3)}\n• Estimativa: ${insight.estimatedDaysRemaining} dias restantes\n\n📝 *Resumo:*\n${insight.summary}\n\n✅ *Recomendações:*\n${insight.recommendations.map(r => `• ${r}`).join('\n')}`;
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   };
@@ -154,7 +155,7 @@ export const InsightModal: React.FC<InsightModalProps> = ({ isOpen, onClose, ins
             <div className="bg-black/40 border border-neutral-800 rounded-xl p-6 flex flex-col items-center justify-center text-center">
               <TrendingDown className="text-indigo-400 mb-2" size={24} />
               <div className="text-4xl font-bold text-white mb-1">
-                {insight.predictedFG.toFixed(3)}
+                {safeFixed(insight.predictedFG, 3)}
               </div>
               <div className="text-sm font-medium text-neutral-400 uppercase tracking-wider">FG Prevista</div>
             </div>
@@ -199,13 +200,13 @@ export const InsightModal: React.FC<InsightModalProps> = ({ isOpen, onClose, ins
                     domain={['dataMin - 0.005', 'dataMax + 0.005']} 
                     stroke="#666" 
                     fontSize={12}
-                    tickFormatter={(val) => val.toFixed(3)}
+                    tickFormatter={(val) => safeFixed(val, 3)}
                     width={60}
                   />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#171717', borderColor: '#333', borderRadius: '8px', color: '#fff' }}
                     itemStyle={{ color: '#818cf8' }}
-                    formatter={(value: number) => [value.toFixed(3), 'Gravidade']}
+                    formatter={(value: number) => [safeFixed(value, 3), 'Gravidade']}
                     labelStyle={{ color: '#999', marginBottom: '4px' }}
                   />
                   <ReferenceLine y={insight.predictedFG} stroke="#10b981" strokeDasharray="3 3" label={{ position: 'insideTopLeft', value: 'FG Prevista', fill: '#10b981', fontSize: 12 }} />

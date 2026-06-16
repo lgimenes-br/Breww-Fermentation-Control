@@ -1,3 +1,4 @@
+import { safeFixed } from '../utils/format';
 
 import React, { useState } from 'react';
 import { Fermenter, FermenterStatus, DeviceMode } from '../types';
@@ -257,7 +258,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
                     <div className="flex flex-col">
                         <div className="flex items-start gap-1">
                             <span className="text-5xl font-light tracking-tighter text-white">
-                                {Number(f.currentDevice?.temperature || 0).toFixed(1)}
+                                {safeFixed(f.currentDevice?.temperature, 1)}
                             </span>
                             <span className="text-lg text-neutral-500 font-light mt-1">°C</span>
                         </div>
@@ -266,12 +267,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
                                 <div className="h-0.5 w-8 bg-neutral-700 rounded-full overflow-hidden">
                                    <div className={`h-full w-1/2 ${f.mode === DeviceMode.KEGERATOR ? 'bg-amber-500' : 'bg-neutral-400'}`}></div>
                                 </div>
-                                <span className="text-xs text-neutral-500 font-mono">Alvo: {Number(f.targetTemp || 0).toFixed(1)}°</span>
+                                <span className="text-xs text-neutral-500 font-mono">Alvo: {safeFixed(f.targetTemp, 1)}°</span>
                              </div>
                              {/* Sub-metric: Fridge */}
                              <div className="flex items-center gap-1.5">
                                   <Thermometer size={12} className="text-neutral-600" />
-                                  <span className="text-xs text-neutral-500">{settings.sensor2Name}: {Number(f.currentFridgeTemp || 0).toFixed(1)}°</span>
+                                  <span className="text-xs text-neutral-500">{settings.sensor2Name}: {safeFixed(f.currentFridgeTemp, 1)}°</span>
                              </div>
                         </div>
                     </div>
@@ -282,12 +283,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
                             <>
                                 <div className="flex items-start justify-end gap-1">
                                     <span className="text-4xl font-light tracking-tighter text-purple-200">
-                                        {Number(f.currentDevice?.gravity || 0).toFixed(3)}
+                                        {safeFixed(f.currentDevice?.gravity, 3)}
                                     </span>
                                     <span className="text-lg text-neutral-500 font-light mt-1">SG</span>
                                 </div>
                                 <span className="text-xs text-neutral-500 uppercase tracking-wider block mt-2">
-                                    OG: {Number(f.active_batch_og || 0).toFixed(3)}
+                                    OG: {safeFixed(f.active_batch_og, 3)}
                                 </span>
                             </>
                         ) : (

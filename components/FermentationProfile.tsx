@@ -1,3 +1,4 @@
+import { safeFixed } from '../utils/format';
 
 import React, { useState, useEffect } from 'react';
 import { FermentationStep } from '../types';
@@ -113,7 +114,7 @@ export const FermentationProfile: React.FC<FermentationProfileProps> = ({
                     className="bg-neutral-800 border border-neutral-700 text-white rounded px-1 w-16 outline-none"
                   />
                 ) : (
-                  <span>{displayOg?.toFixed(3)}</span>
+                  <span>{safeFixed(displayOg, 3)}</span>
                 )}
               </div>
             )}
@@ -130,7 +131,7 @@ export const FermentationProfile: React.FC<FermentationProfileProps> = ({
                     className="bg-neutral-800 border border-neutral-700 text-white rounded px-1 w-16 outline-none"
                   />
                 ) : (
-                  <span>{displayFg?.toFixed(3)}</span>
+                  <span>{safeFixed(displayFg, 3)}</span>
                 )}
               </div>
             )}

@@ -1,3 +1,4 @@
+import { safeFixed } from '../utils/format';
 
 import React from 'react';
 import {
@@ -68,7 +69,7 @@ export const GravityChart: React.FC<GravityChartProps> = ({ data, og, fg, events
               stroke="rgb(var(--color-neutral-600))" 
               domain={[finalMin - 0.002, finalMax + 0.002]} 
               fontSize={11} 
-              tickFormatter={(val) => val.toFixed(3)} 
+              tickFormatter={(val) => safeFixed(val, 3)} 
               tickLine={false}
               axisLine={false}
               dx={-10}
@@ -78,7 +79,7 @@ export const GravityChart: React.FC<GravityChartProps> = ({ data, og, fg, events
               itemStyle={{ color: 'rgb(var(--color-neutral-300))', fontSize: '12px', paddingBottom: '4px' }}
               labelStyle={{ color: 'rgb(var(--color-neutral-400))', fontSize: '10px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}
               labelFormatter={(label) => new Date(label).toLocaleString()}
-              formatter={(value: number) => [value.toFixed(3), 'SG']}
+              formatter={(value: number) => [safeFixed(value, 3), 'SG']}
               cursor={{ stroke: 'rgb(var(--color-neutral-600))', strokeWidth: 0.5, strokeDasharray: '4 4' }}
             />
             <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '12px' }} iconType="circle" />
@@ -89,7 +90,7 @@ export const GravityChart: React.FC<GravityChartProps> = ({ data, og, fg, events
                   stroke="rgb(var(--color-neutral-500))" 
                   strokeDasharray="3 3" 
                   strokeWidth={1}
-                  label={{ position: 'insideTopRight', value: `OG: ${og.toFixed(3)}`, fill: 'rgb(var(--color-neutral-500))', fontSize: 10, fontWeight: 600 }} 
+                  label={{ position: 'insideTopRight', value: `OG: ${safeFixed(og, 3)}`, fill: 'rgb(var(--color-neutral-500))', fontSize: 10, fontWeight: 600 }} 
               />
             )}
             {fg && (
@@ -98,7 +99,7 @@ export const GravityChart: React.FC<GravityChartProps> = ({ data, og, fg, events
                   stroke="rgb(var(--color-neutral-100))" 
                   strokeDasharray="3 3" 
                   strokeWidth={1}
-                  label={{ position: 'insideBottomRight', value: `Meta FG: ${fg.toFixed(3)}`, fill: 'rgb(var(--color-neutral-100))', fontSize: 10, fontWeight: 600 }} 
+                  label={{ position: 'insideBottomRight', value: `Meta FG: ${safeFixed(fg, 3)}`, fill: 'rgb(var(--color-neutral-100))', fontSize: 10, fontWeight: 600 }} 
               />
             )}
 

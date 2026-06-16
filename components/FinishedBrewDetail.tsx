@@ -1,3 +1,4 @@
+import { safeFixed } from '../utils/format';
 
 import React from 'react';
 import { FinishedBrew } from '../types';
@@ -24,7 +25,7 @@ export const FinishedBrewDetail: React.FC<FinishedBrewDetailProps> = ({ brew }) 
   const handleShare = async () => {
     const shareData = {
       title: `Lote ${brew.batchNumber} - ${brew.beerName}`,
-      text: `Confira minha ${brew.beerName} (${brew.style}). ABV: ${brew.abv.toFixed(1)}%, FG: ${brew.fg.toFixed(3)}. Analisado no BREWW Dashboard!`,
+      text: `Confira minha ${brew.beerName} (${brew.style}). ABV: ${safeFixed(brew.abv, 1)}%, FG: ${safeFixed(brew.fg, 3)}. Analisado no BREWW Dashboard!`,
       url: window.location.href
     };
 
@@ -111,25 +112,25 @@ export const FinishedBrewDetail: React.FC<FinishedBrewDetailProps> = ({ brew }) 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
         <StatCard 
             label="Teor Alcoólico" 
-            value={`${brew.abv.toFixed(1)}%`} 
+            value={`${safeFixed(brew.abv, 1)}%`} 
             colorClass="text-green-400" 
         />
         <StatCard 
             label="Atenuação" 
-            value={`${attenuation.toFixed(1)}%`} 
+            value={`${safeFixed(attenuation, 1)}%`} 
             colorClass="text-blue-400" 
             subtext="Eficiência aparente"
         />
         <div className="bg-neutral-900/20 rounded-2xl p-6 border border-neutral-800/50 hover:border-neutral-700 transition-colors">
             <p className="text-neutral-500 text-xs font-bold uppercase tracking-widest mb-2">Gravidade (OG → FG)</p>
             <div className="flex items-baseline gap-3">
-                 <span className="text-2xl text-neutral-600 font-light line-through decoration-neutral-700">{brew.og.toFixed(3)}</span>
-                 <span className="text-4xl font-light text-purple-400 tracking-tighter">{brew.fg.toFixed(3)}</span>
+                 <span className="text-2xl text-neutral-600 font-light line-through decoration-neutral-700">{safeFixed(brew.og, 3)}</span>
+                 <span className="text-4xl font-light text-purple-400 tracking-tighter">{safeFixed(brew.fg, 3)}</span>
             </div>
         </div>
         <StatCard 
             label="Calorias (350ml)" 
-            value={`~${calories.toFixed(0)}`} 
+            value={`~${safeFixed(calories, 0)}`} 
             colorClass="text-white" 
         />
       </div>
