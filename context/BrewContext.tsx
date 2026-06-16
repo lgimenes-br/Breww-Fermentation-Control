@@ -3,7 +3,6 @@ import mqtt from 'mqtt';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { Fermenter, FermenterStatus, DeviceMode } from '../types';
-import { MOCK_FERMENTERS } from '../services/mockData';
 
 interface BrewContextType {
   fermenters: Fermenter[];
@@ -25,14 +24,16 @@ export const BrewProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const url = import.meta.env.VITE_API_URL;
         if (!url) {
-            console.warn("VITE_API_URL not provided, falling back to mock data");
-            return MOCK_FERMENTERS;
+            console.warn("VITE_API_URL not provided, returning empty array");
+            return [];
         }
-        const response = await axios.get(`${url}/api/devices`);
+        const token = localStorage.getItem('token');
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const response = await axios.get(`${url}/api/devices`, { headers });
         return response.data;
       } catch (error) {
-        console.error('Failed to fetch devices from REST API, using mocks fallback:', error);
-        return MOCK_FERMENTERS;
+        console.error('Failed to fetch devices from REST API:', error);
+        return [];
       }
     },
     staleTime: 1000 * 60 * 5, // 5 min

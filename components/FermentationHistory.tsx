@@ -1,14 +1,31 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { FinishedBrew } from '../types';
-import { MOCK_HISTORY } from '../services/mockData';
 import { Calendar, ChevronRight } from 'lucide-react';
+import axios from 'axios';
 
 interface FermentationHistoryProps {
   onSelectBrew: (brew: FinishedBrew) => void;
 }
 
 export const FermentationHistory: React.FC<FermentationHistoryProps> = ({ onSelectBrew }) => {
+  const [history, setHistory] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const url = import.meta.env.VITE_API_URL || '';
+        const token = localStorage.getItem('token');
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const response = await axios.get(`${url}/api/batches`, { headers });
+        setHistory(response.data);
+      } catch (err) {
+        console.error('Failed to fetch batches history', err);
+      }
+    };
+    fetchHistory();
+  }, []);
+
   return (
     <div className="p-6 md:p-8 w-full animate-in fade-in duration-500">
       <header className="mb-12 flex justify-between items-end border-b border-neutral-800/50 pb-6">
@@ -17,7 +34,7 @@ export const FermentationHistory: React.FC<FermentationHistoryProps> = ({ onSele
           <p className="text-neutral-500 font-light">Histórico completo de lotes finalizados.</p>
         </div>
         <div className="text-right hidden md:block">
-            <span className="text-3xl font-light text-neutral-200">{MOCK_HISTORY.length}</span>
+            <span className="text-3xl font-light text-neutral-200">{history.length}</span>
             <p className="text-xs text-neutral-600 uppercase tracking-widest font-bold mt-1">Lotes Arquivados</p>
         </div>
       </header>
@@ -33,7 +50,7 @@ export const FermentationHistory: React.FC<FermentationHistoryProps> = ({ onSele
         </div>
 
         {/* List Items */}
-        {MOCK_HISTORY.map((brew) => (
+        {history.map((brew) => (
             <div 
                 key={brew.id} 
                 onClick={() => onSelectBrew(brew)}
@@ -41,14 +58,14 @@ export const FermentationHistory: React.FC<FermentationHistoryProps> = ({ onSele
             >
                 {/* Beer Info */}
                 <div className="col-span-4">
-                    <span className="text-xs font-mono text-neutral-500 mb-1 block">{brew.batchNumber}</span>
-                    <h3 className="text-xl font-medium text-neutral-200 group-hover:text-white transition-colors">{brew.beerName}</h3>
+                    <span className="text-xs font-mono text-neutral-500 mb-1 block">#{brew.id}</span>
+                    <h3 className="text-xl font-medium text-neutral-200 group-hover:text-white transition-colors">{brew.name}</h3>
                 </div>
 
                 {/* Style */}
                 <div className="col-span-2">
                     <span className="inline-block px-3 py-1 rounded-md text-xs font-medium bg-neutral-800 text-neutral-400 border border-neutral-800 group-hover:border-neutral-700 transition-colors">
-                        {brew.style}
+                        {brew.style || 'N/A'}
                     </span>
                 </div>
 
@@ -56,23 +73,15 @@ export const FermentationHistory: React.FC<FermentationHistoryProps> = ({ onSele
                 <div className="col-span-2 text-neutral-500 text-sm font-light">
                     <div className="flex items-center gap-2">
                         <Calendar size={14} className="text-neutral-700" />
-                        {new Date(brew.endDate).toLocaleDateString()}
+                        {brew.ended_at ? new Date(brew.ended_at).toLocaleDateString() : 'Ativo'}
                     </div>
                 </div>
 
                 {/* Stats */}
                 <div className="col-span-3 flex justify-center gap-6">
                     <div className="text-center">
-                        <span className="block text-[10px] text-neutral-600 uppercase font-bold">ABV</span>
-                        <span className="text-sm font-mono text-green-500/80 group-hover:text-green-400">{brew.abv.toFixed(1)}%</span>
-                    </div>
-                    <div className="text-center">
-                        <span className="block text-[10px] text-neutral-600 uppercase font-bold">OG</span>
-                        <span className="text-sm font-mono text-neutral-500 group-hover:text-neutral-300">{brew.og.toFixed(3)}</span>
-                    </div>
-                    <div className="text-center">
-                        <span className="block text-[10px] text-neutral-600 uppercase font-bold">FG</span>
-                        <span className="text-sm font-mono text-purple-500/80 group-hover:text-purple-400">{brew.fg.toFixed(3)}</span>
+                        <span className="block text-[10px] text-neutral-600 uppercase font-bold">DEVICE</span>
+                        <span className="text-sm font-mono text-neutral-400">{brew.device_name}</span>
                     </div>
                 </div>
 

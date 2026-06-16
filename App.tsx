@@ -12,6 +12,7 @@ import { History, LogOut, Settings as SettingsIcon, ArrowLeft, Snowflake, Circle
 import { useTheme } from './ThemeContext';
 import { useBrewContext } from './context/BrewContext';
 import { useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 
 type ViewState = 'DASHBOARD' | 'HISTORY' | 'SETTINGS';
 type AuthState = 'LOGIN' | 'REGISTER';
@@ -80,42 +81,40 @@ const App: React.FC = () => {
     }
   };
 
-  const handleAddFermenter = (newDevice: Partial<Fermenter>) => {
-    const newFermenter: Fermenter = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: newDevice.name || 'Novo Dispositivo',
-        ipAddress: newDevice.ipAddress || '',
-        mode: DeviceMode.FERMENTER,
-        status: FermenterStatus.IDLE,
-        beerName: '',
-        style: BeerStyle.LAGER,
-        startDate: '',
-        og: 0,
-        fg: 1.010,
-        volume: 20,
-        targetTemp: 20,
-        readings: [],
-        currentDevice: {
-            gravity: 1.000,
-            temperature: 20,
-            battery: 0,
-            angle: 0,
-            rssi: 0,
-            lastUpdate: ''
-        },
-        currentFridgeTemp: 20,
-        profile: [],
-        currentStepIndex: 0,
-        isPaused: false,
-        ...newDevice
-    };
-    queryClient.setQueryData<Fermenter[]>(['fermenters'], (old) => old ? [...old, newFermenter] : [newFermenter]);
+  const handleAddFermenter = async (newDevice: Partial<Fermenter>) => {
+    try {
+        const url = import.meta.env.VITE_API_URL || '';
+        const token = localStorage.getItem('token');
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        
+        await axios.post(`${url}/api/devices`, {
+            serialCode: newDevice.ipAddress,
+            name: newDevice.name || 'Novo Dispositivo'
+        }, { headers });
+
+        refetchFermenters();
+    } catch (err) {
+        console.error('Erro ao adicionar device:', err);
+    }
   };
 
-  const handleDeleteFermenter = (id: string) => {
-    queryClient.setQueryData<Fermenter[]>(['fermenters'], (old) => old ? old.filter(f => f.id !== id) : []);
-    if (selectedFermenterId === id) {
-        setSelectedFermenterId(null);
+  const handleDeleteFermenter = async (id: string) => {
+    const f = fermenters.find(f => f.id === id);
+    if (!f) return;
+    try {
+        const url = import.meta.env.VITE_API_URL || '';
+        const token = localStorage.getItem('token');
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+        await axios.delete(`${url}/api/devices/${f.ipAddress || f.id}`, { headers });
+        
+        queryClient.setQueryData<Fermenter[]>(['fermenters'], (old) => old ? old.filter(item => item.id !== id) : []);
+        if (selectedFermenterId === id) {
+            setSelectedFermenterId(null);
+            setCurrentView('DASHBOARD');
+        }
+    } catch (err) {
+        console.error('Erro ao remover device:', err);
     }
   };
 
