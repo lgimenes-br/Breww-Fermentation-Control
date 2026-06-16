@@ -210,6 +210,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
                  containerClass = "bg-blue-950/10 border-blue-800/30";
              }
 
+             const safeRSSI = f.currentDevice?.rssi || 0;
+
              return (
               <div 
                 key={f.id} 
@@ -322,7 +324,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
                     <div className="flex gap-4">
                         <div className="flex items-center gap-1.5 text-neutral-600 group-hover:text-neutral-400 transition-colors" title="Sinal Wifi">
                             <Wifi size={14} />
-                            <span className="text-xs font-mono">{f.currentDevice?.rssi || 0}</span>
+                            <span className="text-xs font-mono">{safeRSSI}</span>
+                            <span className="text-xs text-neutral-700">•</span>
+                            <span className="text-xs font-mono">
+                                {f.ipAddress || f.currentDevice?.ip || '0.0.0.0'}
+                            </span>
                         </div>
                     </div>
 
