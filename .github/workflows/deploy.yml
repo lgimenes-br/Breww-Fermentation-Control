@@ -6,29 +6,29 @@ on:
       - main
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Conectando no servidor e atualizando o código
-        uses: appleboy/ssh-action@v1.0.3
+      - name: 1. Pegando o código mais recente
+        uses: actions/checkout@v4
+
+      - name: 2. Preparando o computador da nuvem
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 3. Construindo o Layout novo (Build)
+        run: |
+          npm install
+          npm run build
+
+      - name: 4. Copiando a vitrine pronta para a Locaweb
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
           port: 22
-          script: |
-            # 1. Entra na pasta principal do projeto
-            cd /var/www/breww.live/html/
-            
-            # 2. Puxa o código mais novo do GitHub
-            git pull origin main
-            
-            # 3. Atualiza o Backend e reinicia o serviço
-            cd temp_breww_app/breww-app
-            npm install
-            pm2 restart server
-            
-            # 4. Atualiza o Frontend e gera a versão otimizada
-            cd ../../
-            npm install
-            npm run build
+          source: "dist/*" 
+          target: "/var/www/breww.live/html/"
+          strip_components: 1
