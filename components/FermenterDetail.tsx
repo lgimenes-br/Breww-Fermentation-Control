@@ -286,7 +286,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
   };
 
   const handleSetPointChange = (delta: number) => {
-      const newTemp = Number(safeFixed(fermenter.targetTemp + delta, 1));
+      const newTemp = Number(safeFixed(safeTargetTemp + delta, 1));
       let opm = 0;
       if (fermenter.mode === DeviceMode.FRIDGE) opm = 1;
       if (fermenter.mode === DeviceMode.KEGERATOR) opm = 2;
@@ -298,6 +298,37 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
       });
       onUpdate(fermenter.id, { targetTemp: newTemp });
   };
+
+  const safeProfile = React.useMemo(() => {
+    let raw = fermenter.profile || 
+              (fermenter as any).active_batch_profile || 
+              (fermenter.currentDevice as any)?.steps || 
+              (fermenter as any).steps;
+
+    if (typeof raw === 'string') {
+        try { raw = JSON.parse(raw); } catch(e) { raw = []; }
+    }
+    if (!Array.isArray(raw)) return [];
+
+    return raw.map((step: any, index: number) => ({
+        id: step.id || String(index),
+        name: step.name || step.n || `Rampa ${index + 1}`,
+        temperature: parseFloat(step.temperature ?? step.t ?? 0),
+        duration: parseFloat(step.duration ?? step.d ?? 0)
+    }));
+  }, [fermenter]);
+
+  const safeTargetTemp = React.useMemo(() => {
+      // Se for fermentador e tiver um perfil ativo, a rampa manda.
+      if (fermenter.mode === DeviceMode.FERMENTER && safeProfile.length > 0) {
+          const currentRamp = safeProfile[fermenter.currentStepIndex || 0];
+          if (currentRamp && currentRamp.temperature !== undefined) {
+              return currentRamp.temperature;
+          }
+      }
+      // Caso contrário (Geladeira/Chopeira ou sem perfil), usa o setpoint genérico do device
+      return parseFloat(String(fermenter.targetTemp || 0));
+  }, [fermenter.mode, safeProfile, fermenter.currentStepIndex, fermenter.targetTemp]);
 
   // Calculations
   const og = Number(fermenter.active_batch_og || 1.050); // Fallback para evitar divisão por zero
@@ -343,25 +374,6 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
     return 'text-red-500';
   };
 
-  const safeProfile = React.useMemo(() => {
-    let raw = fermenter.profile || 
-              (fermenter as any).active_batch_profile || 
-              (fermenter.currentDevice as any)?.steps || 
-              (fermenter as any).steps;
-
-    if (typeof raw === 'string') {
-        try { raw = JSON.parse(raw); } catch(e) { raw = []; }
-    }
-    if (!Array.isArray(raw)) return [];
-
-    return raw.map((step: any, index: number) => ({
-        id: step.id || String(index),
-        name: step.name || step.n || `Rampa ${index + 1}`,
-        temperature: parseFloat(step.temperature ?? step.t ?? 0),
-        duration: parseFloat(step.duration ?? step.d ?? 0)
-    }));
-  }, [fermenter]);
-
   useEffect(() => {
       console.log("DEBUG TOTAL DO FERMENTADOR:", fermenter);
   }, [fermenter]);
@@ -372,7 +384,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
     const newPoint = {
         timestamp: fermenter.currentDevice.lastUpdate || new Date().toISOString(),
         beerTemp: parseFloat(String(fermenter.currentDevice.temperature || 0)),
-        targetTemp: parseFloat(String(fermenter.targetTemp || 0)),
+        targetTemp: safeTargetTemp,
         fridgeTemp: parseFloat(String(fermenter.currentFridgeTemp || 0)),
         gravity: parseFloat(String(fermenter.currentDevice.gravity || 0))
     };
@@ -385,7 +397,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
         // O spread [...] cria uma nova referência forçando o React.memo a re-renderizar o gráfico
         return [...prev, newPoint]; 
     });
-}, [fermenter.currentDevice, fermenter.targetTemp, fermenter.currentFridgeTemp]);
+}, [fermenter.currentDevice, safeTargetTemp, fermenter.currentFridgeTemp]);
 
   const chartLimit = settings?.chartPoints || 50;
   const slicedReadings = chartLimit > 0 ? localReadings.slice(-chartLimit) : localReadings;
@@ -444,7 +456,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                     </div>
                     <div className="flex flex-col">
                         <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Set-Point</span>
-                        <span className="text-2xl font-mono text-green-500">{safeFixed(fermenter.targetTemp, 1)}°C</span>
+                        <span className="text-2xl font-mono text-green-500">{safeFixed(safeTargetTemp, 1)}°C</span>
                     </div>
                 </div>
              </div>
@@ -630,7 +642,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                             <div className="text-center">
                                 <Target size={16} className="text-neutral-600 mx-auto mb-2" />
                                 <span className="block text-[10px] font-bold text-neutral-600 uppercase mb-1">Set-point</span>
-                                <span className="block text-sm font-mono text-white">{safeFixed(fermenter.targetTemp, 1)}°</span>
+                                <span className="block text-sm font-mono text-white">{safeFixed(safeTargetTemp, 1)}°</span>
                             </div>
                              <div className="text-center">
                                 <Snowflake size={16} className="text-neutral-600 mx-auto mb-2" />
