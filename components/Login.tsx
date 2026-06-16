@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { Lock, Mail, ArrowRight, Loader2 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 
 const GoogleIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="20px" height="20px">
@@ -17,18 +18,33 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('cervejeiro@brewmaster.ai');
   const [password, setPassword] = useState('123456');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Simulating API call
-    setTimeout(() => {
-      setLoading(false);
-      onLogin();
-    }, 1500);
+    try {
+        const url = import.meta.env.VITE_API_URL || '';
+        const res = await fetch(`${url}/api/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        if (!res.ok) throw new Error('Falha no login');
+        const data = await res.json();
+        localStorage.setItem('token', data.token);
+        
+        // Instruct queryClient to invalidate to reload data
+        queryClient.invalidateQueries({ queryKey: ['fermenters'] });
+        onLogin();
+    } catch (err) {
+        alert("Erro ao fazer login");
+    } finally {
+        setLoading(false);
+    }
   };
 
   return (

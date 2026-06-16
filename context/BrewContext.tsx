@@ -27,7 +27,10 @@ export const BrewProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.warn("VITE_API_URL not provided, returning empty array");
             return [];
         }
+        
         const token = localStorage.getItem('token');
+        console.log(`Tentando buscar dispositivos. Token encontrado: ${token ? 'Sim' : 'Não'}`);
+        
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const response = await axios.get(`${url}/api/devices`, { headers });
         return response.data;
