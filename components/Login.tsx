@@ -39,7 +39,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
         window.dispatchEvent(new Event('local-storage'));
         
         // Instruct queryClient to invalidate to reload data
-        queryClient.invalidateQueries({ queryKey: ['fermenters'] });
+        await queryClient.invalidateQueries({ queryKey: ['fermenters'] });
         onLogin();
     } catch (err) {
         alert("Erro ao fazer login");
