@@ -1,0 +1,34 @@
+name: Deploy Automático na Locaweb
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Conectando no servidor e atualizando o código
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: 22
+          script: |
+            # 1. Entra na pasta principal do projeto
+            cd /var/www/breww.live/html/
+            
+            # 2. Puxa o código mais novo do GitHub
+            git pull origin main
+            
+            # 3. Atualiza o Backend e reinicia o serviço
+            cd temp_breww_app/breww-app
+            npm install
+            pm2 restart server
+            
+            # 4. Atualiza o Frontend e gera a versão otimizada
+            cd ../../
+            npm install
+            npm run build
