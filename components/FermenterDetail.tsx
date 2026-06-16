@@ -366,23 +366,26 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
       console.log("DEBUG TOTAL DO FERMENTADOR:", fermenter);
   }, [fermenter]);
 
-  const displayReadings = React.useMemo(() => {
-      const history = localReadings || [];
-      const live = fermenter.readings || [];
-      
-      // Mescla as duas listas usando um Map para evitar timestamps duplicados
-      const map = new Map();
-      history.forEach(r => map.set(r.timestamp, r));
-      live.forEach(r => map.set(r.timestamp, r));
-      
-      // Converte de volta para array e garante a ordem cronológica
-      const merged = Array.from(map.values()).sort((a, b) => 
-          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-      );
-      
-      const limit = parseInt(localStorage.getItem('breww_chartPoints') || '50', 10);
-      return limit > 0 ? merged.slice(-limit) : merged;
-  }, [localReadings, fermenter.readings]);
+  useEffect(() => {
+    if (!fermenter.currentDevice) return;
+
+    const newPoint = {
+        timestamp: fermenter.currentDevice.lastUpdate || new Date().toISOString(),
+        beerTemp: parseFloat(String(fermenter.currentDevice.temperature || 0)),
+        targetTemp: parseFloat(String(fermenter.targetTemp || 0)),
+        fridgeTemp: parseFloat(String(fermenter.currentFridgeTemp || 0)),
+        gravity: parseFloat(String(fermenter.currentDevice.gravity || 0))
+    };
+
+    setLocalReadings(prev => {
+        // Evita duplicar o mesmo segundo
+        if (prev.length > 0 && prev[prev.length - 1].timestamp === newPoint.timestamp) {
+            return prev;
+        }
+        // O spread [...] cria uma nova referência forçando o React.memo a re-renderizar o gráfico
+        return [...prev, newPoint]; 
+    });
+}, [fermenter.currentDevice, fermenter.targetTemp, fermenter.currentFridgeTemp]);
 
   return (
     <div className="p-6 md:p-8 w-full animate-in fade-in duration-500">
@@ -557,7 +560,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                 {isReady ? (
                     <div style={{ minHeight: '300px', width: '100%', display: 'block' }}>
                         <TemperatureChart 
-                            data={displayReadings} 
+                            data={localReadings} 
                             events={fermenter.status === FermenterStatus.IDLE ? [] : events} 
                             onAddEvent={handleAddEvent}
                             onRemoveEvent={handleRemoveEvent}
@@ -573,7 +576,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                     isReady ? (
                         <div style={{ minHeight: '300px', width: '100%', display: 'block' }}>
                             <GravityChart 
-                                data={displayReadings} 
+                                data={localReadings} 
                                 og={og} 
                                 fg={fermenter.active_batch_fg || 0} 
                                 events={fermenter.status === FermenterStatus.IDLE ? [] : events} 
