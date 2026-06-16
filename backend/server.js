@@ -41,6 +41,7 @@ const initDb = async () => {
         await pool.execute(`CREATE TABLE IF NOT EXISTS batch_events (id INT AUTO_INCREMENT PRIMARY KEY, batch_id INT NOT NULL, event_type VARCHAR(50) NOT NULL, description TEXT, recorded_at DATETIME NOT NULL, FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE CASCADE)`);
         await pool.execute(`CREATE TABLE IF NOT EXISTS recipes (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, name VARCHAR(100) NOT NULL, style VARCHAR(100), est_og VARCHAR(10), est_fg VARCHAR(10), created_at DATETIME DEFAULT NOW(), FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)`);
         await pool.execute(`CREATE TABLE IF NOT EXISTS recipe_steps (id INT AUTO_INCREMENT PRIMARY KEY, recipe_id INT NOT NULL, step_order INT NOT NULL, name VARCHAR(50), temperature FLOAT, days INT, FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE)`);
+        try { await pool.execute(`ALTER TABLE batches ADD COLUMN profile JSON;`); } catch(e) {}
         console.log('✅ [DB] Tabelas verificadas.');
     } catch (e) { console.error('❌ Erro DB Init:', e); }
 };
@@ -101,6 +102,10 @@ mqttClient.on('message', async (topic, message) => {
                     target = payload.steps[payload.currStep].t;
                 }
                 const currentBatchId = activeBatches[serialCode] || null;
+                
+                if (currentBatchId && payload.steps && Array.isArray(payload.steps)) {
+                    await pool.execute('UPDATE batches SET profile = ? WHERE id = ?', [JSON.stringify(payload.steps), currentBatchId]);
+                }
                 
                 let rawGravity = payload.is_sg ?? payload.sg ?? payload.gravity ?? null;
                 let calculatedGravity = rawGravity;
