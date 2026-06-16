@@ -157,9 +157,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
              const now = new Date().getTime();
              const isOnline = lastUpdate > 0 && !isNaN(lastUpdate) && (now - lastUpdate) < 30 * 60 * 1000;
 
+             let safeProfile: any[] = [];
+             const rawProfile = f.profile || (f as any).active_batch_profile;
+             if (typeof rawProfile === 'string') {
+                 try { safeProfile = JSON.parse(rawProfile); } catch(e) { safeProfile = []; }
+             } else if (Array.isArray(rawProfile)) {
+                 safeProfile = rawProfile;
+             }
+             const currentStep = safeProfile[f.currentStepIndex || 0];
+
              let safeTarget = parseFloat(String(f.targetTemp || 0));
-             if (f.mode === DeviceMode.FERMENTER && f.profile && f.profile[f.currentStepIndex]) {
-                 const currentStep = f.profile[f.currentStepIndex];
+             if (f.mode === DeviceMode.FERMENTER && currentStep) {
                  const stepTemp = currentStep.temperature ?? currentStep.t;
                  if (stepTemp !== undefined) {
                      safeTarget = parseFloat(String(stepTemp));
@@ -174,11 +182,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdat
 
              if (f.mode === DeviceMode.FERMENTER) {
                  if (f.status !== FermenterStatus.IDLE) {
-                    if (f.profile && f.profile.length > 0 && f.currentStepIndex < f.profile.length) {
-                        const currentStep = f.profile[f.currentStepIndex];
-                        statusLabel = currentStep.name || currentStep.n || `Rampa ${f.currentStepIndex + 1}`;
+                    if (currentStep) {
+                        statusLabel = currentStep.name || currentStep.n || `Rampa ${(f.currentStepIndex || 0) + 1}`;
                     } else {
-                        statusLabel = f.status;
+                        statusLabel = f.status || 'Ativo';
                     }
 
                     if (f.status === FermenterStatus.COLD_CRASH) {
