@@ -427,7 +427,6 @@ const App: React.FC = () => {
           </>
         ) : (
           <Dashboard 
-            fermenters={fermenters} 
             onSelectFermenter={setSelectedFermenterId}
             onUpdateFermenter={handleUpdateFermenter}
             onAddFermenter={handleAddFermenter}

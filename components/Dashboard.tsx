@@ -3,9 +3,9 @@ import React, { useState } from 'react';
 import { Fermenter, FermenterStatus, DeviceMode } from '../types';
 import { Wifi, ArrowRight, Thermometer, Settings, X, Save, Network, Plus, Search, Loader2, Smartphone, Trash2, AlertTriangle } from 'lucide-react';
 import { useSettings } from '../SettingsContext';
+import { useBrewContext } from '../context/BrewContext';
 
 interface DashboardProps {
-  fermenters: Fermenter[];
   onSelectFermenter: (id: string) => void;
   onUpdateFermenter: (id: string, updates: Partial<Fermenter>) => void;
   onAddFermenter: (fermenter: Partial<Fermenter>) => void;
@@ -18,8 +18,9 @@ interface ScannedDevice {
     rssi: number;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ fermenters, onSelectFermenter, onUpdateFermenter, onAddFermenter, onDeleteFermenter }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ onSelectFermenter, onUpdateFermenter, onAddFermenter, onDeleteFermenter }) => {
   const { settings } = useSettings();
+  const { fermenters, handleTriggerUpdate } = useBrewContext();
   // Edit States
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');

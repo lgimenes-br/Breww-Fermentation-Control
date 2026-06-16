@@ -8,6 +8,7 @@ import { GeminiAdvisor } from './GeminiAdvisor';
 import { FermentationProfile } from './FermentationProfile';
 import { FermentationWizard } from './FermentationWizard';
 import { useSettings } from '../SettingsContext';
+import { useBrewContext } from '../context/BrewContext';
 
 interface FermenterDetailProps {
   fermenter: Fermenter;
@@ -16,6 +17,7 @@ interface FermenterDetailProps {
 
 export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onUpdate }) => {
   const { settings } = useSettings();
+  const { handleTriggerUpdate } = useBrewContext();
   
   // Local state for Kegerator Config to handle inputs before saving
   const [kegeratorForm, setKegeratorForm] = useState<KegeratorConfig>({
@@ -41,6 +43,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
       og: number, 
       fg: number
   ) => {
+      const target = steps[0]?.temperature || 20;
       onUpdate(fermenter.id, {
           profile: steps,
           beerName,
@@ -52,8 +55,14 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
           startDate: new Date().toISOString(),
           currentStepIndex: 0,
           isPaused: false,
-          targetTemp: steps[0]?.temperature || 20,
+          targetTemp: target,
           events: []
+      });
+
+      handleTriggerUpdate(fermenter.ipAddress || fermenter.id, {
+          type: 'SET_TEMP',
+          target,
+          opm: 0
       });
   };
   
@@ -86,13 +95,29 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
 
   const handleNextStep = () => {
     if (fermenter.profile && fermenter.currentStepIndex < fermenter.profile.length - 1) {
-        onUpdate(fermenter.id, { currentStepIndex: fermenter.currentStepIndex + 1 });
+        const nextIndex = fermenter.currentStepIndex + 1;
+        const target = fermenter.profile[nextIndex].temperature;
+        onUpdate(fermenter.id, { currentStepIndex: nextIndex, targetTemp: target });
+        
+        handleTriggerUpdate(fermenter.ipAddress || fermenter.id, {
+            type: 'SET_TEMP',
+            target,
+            opm: 0
+        });
     }
   };
 
   const handlePreviousStep = () => {
     if (fermenter.profile && fermenter.currentStepIndex > 0) {
-        onUpdate(fermenter.id, { currentStepIndex: fermenter.currentStepIndex - 1 });
+        const prevIndex = fermenter.currentStepIndex - 1;
+        const target = fermenter.profile[prevIndex].temperature;
+        onUpdate(fermenter.id, { currentStepIndex: prevIndex, targetTemp: target });
+
+        handleTriggerUpdate(fermenter.ipAddress || fermenter.id, {
+            type: 'SET_TEMP',
+            target,
+            opm: 0
+        });
     }
   };
 
@@ -111,6 +136,12 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
           beerName: '',
           profile: []
       });
+
+      handleTriggerUpdate(fermenter.ipAddress || fermenter.id, {
+          type: 'SET_TEMP',
+          target: lastStepTemp,
+          opm: 0
+      });
   };
 
   // Kegerator Handlers
@@ -124,6 +155,15 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
 
   const handleSetPointChange = (delta: number) => {
       const newTemp = Number((fermenter.targetTemp + delta).toFixed(1));
+      let opm = 0;
+      if (fermenter.mode === DeviceMode.FRIDGE) opm = 1;
+      if (fermenter.mode === DeviceMode.KEGERATOR) opm = 2;
+
+      handleTriggerUpdate(fermenter.ipAddress || fermenter.id, {
+          type: 'SET_TEMP',
+          target: newTemp,
+          opm
+      });
       onUpdate(fermenter.id, { targetTemp: newTemp });
   };
 
