@@ -34,9 +34,12 @@ export const BrewProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const response = await axios.get(`${url}/api/devices`, { headers });
         return response.data;
-      } catch (error) {
+      } catch (error: any) {
+        if (axios.isAxiosError(error) && error.response?.status === 401) {
+          return [];
+        }
         console.error('Failed to fetch devices from REST API:', error);
-        return [];
+        throw error;
       }
     },
     staleTime: 1000 * 60 * 5,
