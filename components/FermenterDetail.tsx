@@ -514,7 +514,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
             {/* Left Column: Charts & Events */}
             <div className="lg:col-span-2 space-y-4 min-w-0 flex flex-col order-2 lg:order-1">
                 {isReady ? (
-                    <div className="flex-1" style={{ height: '300px', width: '100%', position: 'relative' }}>
+                    <div style={{ minHeight: '300px', width: '100%', display: 'block' }}>
                         <TemperatureChart 
                             data={readings} 
                             events={fermenter.status === FermenterStatus.IDLE ? [] : events} 
@@ -523,14 +523,14 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                         />
                     </div>
                 ) : (
-                    <div className="flex-1" style={{ height: '300px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
+                    <div style={{ minHeight: '300px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
                         Carregando gráfico...
                     </div>
                 )}
 
                 {fermenter.mode === DeviceMode.FERMENTER && (
                     isReady ? (
-                        <div className="flex-1" style={{ height: '300px', width: '100%', position: 'relative' }}>
+                        <div style={{ minHeight: '300px', width: '100%', display: 'block' }}>
                             <GravityChart 
                                 data={readings} 
                                 og={og} 
@@ -539,7 +539,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                             />
                         </div>
                     ) : (
-                        <div className="flex-1" style={{ height: '300px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
+                        <div style={{ minHeight: '300px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
                             Carregando gráfico...
                         </div>
                     )

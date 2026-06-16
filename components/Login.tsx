@@ -36,6 +36,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
         if (!res.ok) throw new Error('Falha no login');
         const data = await res.json();
         localStorage.setItem('token', data.token);
+        window.dispatchEvent(new Event('local-storage'));
         
         // Instruct queryClient to invalidate to reload data
         queryClient.invalidateQueries({ queryKey: ['fermenters'] });

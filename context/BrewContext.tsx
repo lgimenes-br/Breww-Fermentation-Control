@@ -16,12 +16,20 @@ const BrewContext = createContext<BrewContextType | undefined>(undefined);
 export const BrewProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const queryClient = useQueryClient();
   const [mqttClient, setMqttClient] = useState<mqtt.MqttClient | null>(null);
+  
+  // Make token reactive so enabled flag updates upon login without reload
+  const [token, setToken] = useState(() => localStorage.getItem('token'));
+  useEffect(() => {
+    const handleStorage = () => setToken(localStorage.getItem('token'));
+    window.addEventListener('local-storage', handleStorage);
+    return () => window.removeEventListener('local-storage', handleStorage);
+  }, []);
 
   // Fetch initial data via REST API
   const isLoginPage = window.location.pathname === '/login';
   const { data: fermenters = [], isLoading, refetch } = useQuery<Fermenter[]>({
     queryKey: ['fermenters'],
-    enabled: !isLoginPage && !!localStorage.getItem('token'),
+    enabled: !isLoginPage && !!token,
     queryFn: async () => {
       try {
         const url = import.meta.env.VITE_API_URL;
