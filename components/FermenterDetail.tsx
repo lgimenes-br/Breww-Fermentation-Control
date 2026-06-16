@@ -366,9 +366,23 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
       console.log("DEBUG TOTAL DO FERMENTADOR:", fermenter);
   }, [fermenter]);
 
-  const combinedReadings = localReadings.length > 0 ? localReadings : (fermenter.readings || []);
-  const limit = parseInt(localStorage.getItem('breww_chartPoints') || '50', 10);
-  const displayReadings = limit > 0 ? combinedReadings.slice(-limit) : combinedReadings;
+  const displayReadings = React.useMemo(() => {
+      const history = localReadings || [];
+      const live = fermenter.readings || [];
+      
+      // Mescla as duas listas usando um Map para evitar timestamps duplicados
+      const map = new Map();
+      history.forEach(r => map.set(r.timestamp, r));
+      live.forEach(r => map.set(r.timestamp, r));
+      
+      // Converte de volta para array e garante a ordem cronológica
+      const merged = Array.from(map.values()).sort((a, b) => 
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+      
+      const limit = parseInt(localStorage.getItem('breww_chartPoints') || '50', 10);
+      return limit > 0 ? merged.slice(-limit) : merged;
+  }, [localReadings, fermenter.readings]);
 
   return (
     <div className="p-6 md:p-8 w-full animate-in fade-in duration-500">
