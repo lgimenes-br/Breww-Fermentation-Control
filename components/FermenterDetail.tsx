@@ -1,5 +1,6 @@
 import { safeFixed } from '../utils/format';
 
+import axios from 'axios';
 import React, { useState, useEffect } from 'react';
 import { Fermenter, FermenterStatus, FermentationStep, DeviceMode, FermentationEvent, KegeratorConfig } from '../types';
 import { ThermometerSnowflake, Flame, PauseCircle, PlayCircle, Snowflake, Wifi, Clock, Percent, FlaskConical, Beer, Battery, Target, ArrowDown, Monitor, Save, Plus, Minus, ChevronDown } from 'lucide-react';
@@ -30,13 +31,59 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
       abv: 0
   });
 
+  const [readings, setReadings] = useState<Reading[]>(fermenter.readings || []);
+  const [events, setEvents] = useState<FermentationEvent[]>(fermenter.events || []);
+
   useEffect(() => {
       if (fermenter.kegeratorConfig) {
           setKegeratorForm(fermenter.kegeratorConfig);
       }
   }, [fermenter.kegeratorConfig]);
 
-  const handleStartFermentation = (
+  useEffect(() => {
+    if (!fermenter.active_batch_id) {
+       setReadings(fermenter.readings || []);
+       setEvents(fermenter.events || []);
+       return;
+    }
+    
+    const fetchBatchData = async () => {
+      try {
+        const url = import.meta.env.VITE_API_URL || '';
+        const token = localStorage.getItem('token');
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        
+        const resData = await axios.get(`${url}/api/batch/${fermenter.active_batch_id}/data`, { headers });
+        const resEvents = await axios.get(`${url}/api/batch/${fermenter.active_batch_id}/events`, { headers });
+        
+        const mappedReadings: Reading[] = resData.data.map((r: any) => ({
+            timestamp: r.recorded_at,
+            beerTemp: r.temp_ferm,
+            fridgeTemp: r.temp_amb,
+            targetTemp: r.target_temp,
+            gravity: r.gravity
+        }));
+
+        const mappedEvents: FermentationEvent[] = resEvents.data.map((e: any) => ({
+            id: String(e.id),
+            type: e.event_type as any,
+            description: e.description,
+            timestamp: e.recorded_at
+        }));
+        
+        setReadings(mappedReadings);
+        setEvents(mappedEvents);
+      } catch (e) {
+        console.error("Failed to load batch data", e);
+      }
+    };
+    
+    fetchBatchData();
+    const interval = setInterval(fetchBatchData, 60000); // Polling every minute
+    return () => clearInterval(interval);
+  }, [fermenter.active_batch_id]);
+
+  const handleStartFermentation = async (
       steps: FermentationStep[], 
       beerName: string, 
       style: string, 
@@ -47,11 +94,11 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
       const target = steps[0]?.temperature || 20;
       onUpdate(fermenter.id, {
           profile: steps,
-          beerName,
-          style,
+          active_batch_name: beerName,
+          style: style as any,
           volume,
-          og,
-          fg,
+          active_batch_og: og,
+          active_batch_fg: fg,
           status: FermenterStatus.ACTIVE,
           startDate: new Date().toISOString(),
           currentStepIndex: 0,
@@ -59,6 +106,22 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
           targetTemp: target,
           events: []
       });
+
+      // Also start it on the backend
+      try {
+          const url = import.meta.env.VITE_API_URL || '';
+          const token = localStorage.getItem('token');
+          const headers = token ? { Authorization: `Bearer ${token}` } : {};
+          await axios.post(`${url}/api/batch/start`, {
+              serialCode: fermenter.serial_code || String(fermenter.id),
+              name: beerName,
+              style,
+              og,
+              fg
+          }, { headers });
+      } catch (e) {
+          console.error("Failed to start batch on backend", e);
+      }
 
       handleTriggerUpdate(fermenter.serial_code || String(fermenter.id), {
           type: 'SET_TEMP',
@@ -71,22 +134,67 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
       onUpdate(fermenter.id, { profile: newSteps });
   };
 
-  const handleUpdateGravity = (og: number, fg: number) => {
-      onUpdate(fermenter.id, { og, fg });
+  const handleUpdateGravity = async (og: number, fg: number) => {
+      onUpdate(fermenter.id, { active_batch_og: og, active_batch_fg: fg });
+
+      // Hit backend
+      try {
+          const url = import.meta.env.VITE_API_URL || '';
+          const token = localStorage.getItem('token');
+          const headers = token ? { Authorization: `Bearer ${token}` } : {};
+          await axios.put(`${url}/api/batch/update`, {
+              serialCode: fermenter.serial_code || String(fermenter.id),
+              og,
+              fg
+          }, { headers });
+      } catch (e) {
+          console.error("Failed to update gravity on backend", e);
+      }
   };
 
-  const handleAddEvent = (event: Omit<FermentationEvent, 'id'>) => {
+  const handleAddEvent = async (event: Omit<FermentationEvent, 'id'>) => {
     const newEvent: FermentationEvent = {
         ...event,
         id: Math.random().toString(36).substr(2, 9)
     };
-    const updatedEvents = [...(fermenter.events || []), newEvent];
+    
+    // Optimistic UI
+    const updatedEvents = [...events, newEvent];
+    setEvents(updatedEvents);
     onUpdate(fermenter.id, { events: updatedEvents });
+
+    if (fermenter.active_batch_id) {
+       try {
+          const url = import.meta.env.VITE_API_URL || '';
+          const token = localStorage.getItem('token');
+          const headers = token ? { Authorization: `Bearer ${token}` } : {};
+          await axios.post(`${url}/api/events`, {
+              batchId: fermenter.active_batch_id,
+              type: event.type,
+              description: event.description,
+              date: event.timestamp
+          }, { headers });
+       } catch (err) {
+          console.error("Failed to add event to backend", err);
+       }
+    }
   };
 
-  const handleRemoveEvent = (id: string) => {
-    const updatedEvents = (fermenter.events || []).filter(e => e.id !== id);
+  const handleRemoveEvent = async (id: string) => {
+    const updatedEvents = events.filter(e => e.id !== id);
+    setEvents(updatedEvents);
     onUpdate(fermenter.id, { events: updatedEvents });
+
+    if (fermenter.active_batch_id) {
+       try {
+          const url = import.meta.env.VITE_API_URL || '';
+          const token = localStorage.getItem('token');
+          const headers = token ? { Authorization: `Bearer ${token}` } : {};
+          await axios.delete(`${url}/api/events/${id}`, { headers });
+       } catch (err) {
+          console.error("Failed to remove event from backend", err);
+       }
+    }
   };
 
   // Profile Control Handlers
@@ -122,7 +230,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
     }
   };
 
-  const handleFinishProfile = () => {
+  const handleFinishProfile = async () => {
       // Moves status to IDLE, stops the profile, resets events, and sets targetTemp to the last step's temp
       const lastStepTemp = fermenter.profile && fermenter.profile.length > 0
           ? fermenter.profile[fermenter.profile.length - 1].temperature
@@ -134,9 +242,24 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
           currentStepIndex: 0,
           events: [],
           targetTemp: lastStepTemp,
-          beerName: '',
+          active_batch_name: null,
+          active_batch_id: null,
+          active_batch_og: null,
+          active_batch_fg: null,
           profile: []
       });
+
+      // Also stop it on the backend
+      try {
+          const url = import.meta.env.VITE_API_URL || '';
+          const token = localStorage.getItem('token');
+          const headers = token ? { Authorization: `Bearer ${token}` } : {};
+          await axios.post(`${url}/api/batch/stop`, {
+              serialCode: fermenter.serial_code || String(fermenter.id),
+          }, { headers });
+      } catch (e) {
+          console.error("Failed to stop batch on backend", e);
+      }
 
       handleTriggerUpdate(fermenter.serial_code || String(fermenter.id), {
           type: 'SET_TEMP',
@@ -384,8 +507,8 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
             <div className="lg:col-span-2 space-y-4 min-w-0 flex flex-col order-2 lg:order-1">
                 <div className="flex-1">
                     <TemperatureChart 
-                        data={fermenter.readings} 
-                        events={fermenter.status === FermenterStatus.IDLE ? [] : fermenter.events} 
+                        data={readings} 
+                        events={fermenter.status === FermenterStatus.IDLE ? [] : events} 
                         onAddEvent={handleAddEvent}
                         onRemoveEvent={handleRemoveEvent}
                     />
@@ -394,10 +517,10 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                 {fermenter.mode === DeviceMode.FERMENTER && (
                     <div className="flex-1">
                         <GravityChart 
-                            data={fermenter.readings} 
+                            data={readings} 
                             og={og} 
                             fg={fermenter.active_batch_fg || 0} 
-                            events={fermenter.status === FermenterStatus.IDLE ? [] : fermenter.events} 
+                            events={fermenter.status === FermenterStatus.IDLE ? [] : events} 
                         />
                     </div>
                 )}
