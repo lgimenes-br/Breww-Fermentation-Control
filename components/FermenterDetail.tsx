@@ -344,19 +344,31 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
   };
 
   const safeProfile = React.useMemo(() => {
-       let raw = fermenter.profile || (fermenter as any).active_batch_profile || [];
-       if (typeof raw === 'string') {
-           try { raw = JSON.parse(raw); } catch(e) { raw = []; }
-       }
-       if (!Array.isArray(raw)) return [];
-       
-       return raw.map((step: any, index: number) => ({
-           id: step.id || String(index),
-           name: step.name || step.n || 'Rampa',
-           temperature: parseFloat(step.temperature ?? step.t ?? 0),
-           duration: parseFloat(step.duration ?? step.d ?? 0)
-       }));
-   }, [fermenter.profile, (fermenter as any).active_batch_profile]);
+    let raw = fermenter.profile || 
+              (fermenter as any).active_batch_profile || 
+              (fermenter.currentDevice as any)?.steps || 
+              (fermenter as any).steps;
+
+    if (typeof raw === 'string') {
+        try { raw = JSON.parse(raw); } catch(e) { raw = []; }
+    }
+    if (!Array.isArray(raw)) return [];
+
+    return raw.map((step: any, index: number) => ({
+        id: step.id || String(index),
+        name: step.name || step.n || `Rampa ${index + 1}`,
+        temperature: parseFloat(step.temperature ?? step.t ?? 0),
+        duration: parseFloat(step.duration ?? step.d ?? 0)
+    }));
+  }, [fermenter]);
+
+  useEffect(() => {
+      console.log("DEBUG TOTAL DO FERMENTADOR:", fermenter);
+  }, [fermenter]);
+
+  const combinedReadings = localReadings.length > 0 ? localReadings : (fermenter.readings || []);
+  const limit = parseInt(localStorage.getItem('breww_chartPoints') || '50', 10);
+  const displayReadings = limit > 0 ? combinedReadings.slice(-limit) : combinedReadings;
 
   return (
     <div className="p-6 md:p-8 w-full animate-in fade-in duration-500">
@@ -531,7 +543,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                 {isReady ? (
                     <div style={{ minHeight: '300px', width: '100%', display: 'block' }}>
                         <TemperatureChart 
-                            data={localReadings.length > 0 ? localReadings : fermenter.readings} 
+                            data={displayReadings} 
                             events={fermenter.status === FermenterStatus.IDLE ? [] : events} 
                             onAddEvent={handleAddEvent}
                             onRemoveEvent={handleRemoveEvent}
@@ -547,7 +559,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                     isReady ? (
                         <div style={{ minHeight: '300px', width: '100%', display: 'block' }}>
                             <GravityChart 
-                                data={localReadings.length > 0 ? localReadings : fermenter.readings} 
+                                data={displayReadings} 
                                 og={og} 
                                 fg={fermenter.active_batch_fg || 0} 
                                 events={fermenter.status === FermenterStatus.IDLE ? [] : events} 
