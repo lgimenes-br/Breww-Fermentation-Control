@@ -33,6 +33,14 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
 
   const [readings, setReadings] = useState<Reading[]>(fermenter.readings || []);
   const [events, setEvents] = useState<FermentationEvent[]>(fermenter.events || []);
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsReady(true);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
       if (fermenter.kegeratorConfig) {
@@ -505,24 +513,36 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
             
             {/* Left Column: Charts & Events */}
             <div className="lg:col-span-2 space-y-4 min-w-0 flex flex-col order-2 lg:order-1">
-                <div className="flex-1" style={{ height: '300px', width: '100%', position: 'relative' }}>
-                    <TemperatureChart 
-                        data={readings} 
-                        events={fermenter.status === FermenterStatus.IDLE ? [] : events} 
-                        onAddEvent={handleAddEvent}
-                        onRemoveEvent={handleRemoveEvent}
-                    />
-                </div>
-
-                {fermenter.mode === DeviceMode.FERMENTER && (
+                {isReady ? (
                     <div className="flex-1" style={{ height: '300px', width: '100%', position: 'relative' }}>
-                        <GravityChart 
+                        <TemperatureChart 
                             data={readings} 
-                            og={og} 
-                            fg={fermenter.active_batch_fg || 0} 
                             events={fermenter.status === FermenterStatus.IDLE ? [] : events} 
+                            onAddEvent={handleAddEvent}
+                            onRemoveEvent={handleRemoveEvent}
                         />
                     </div>
+                ) : (
+                    <div className="flex-1" style={{ height: '300px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
+                        Carregando gráfico...
+                    </div>
+                )}
+
+                {fermenter.mode === DeviceMode.FERMENTER && (
+                    isReady ? (
+                        <div className="flex-1" style={{ height: '300px', width: '100%', position: 'relative' }}>
+                            <GravityChart 
+                                data={readings} 
+                                og={og} 
+                                fg={fermenter.active_batch_fg || 0} 
+                                events={fermenter.status === FermenterStatus.IDLE ? [] : events} 
+                            />
+                        </div>
+                    ) : (
+                        <div className="flex-1" style={{ height: '300px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
+                            Carregando gráfico...
+                        </div>
+                    )
                 )}
             </div>
 
