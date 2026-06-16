@@ -83,6 +83,7 @@ export interface Fermenter {
   active_batch_name?: string | null;
   active_batch_og?: number | null;
   active_batch_fg?: number | null;
+  active_batch_profile?: string | any;
   mode?: DeviceMode; 
   status?: FermenterStatus;
   style?: BeerStyle;

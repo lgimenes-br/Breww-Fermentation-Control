@@ -35,6 +35,36 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
   const [events, setEvents] = useState<FermentationEvent[]>(fermenter.events || []);
   const [isReady, setIsReady] = useState(false);
 
+  const parsedProfile = React.useMemo(() => {
+      if (fermenter.profile && fermenter.profile.length > 0) return fermenter.profile;
+      
+      const rawProfile = fermenter.active_batch_profile;
+      if (!rawProfile) return [];
+      
+      try {
+          const parsed = typeof rawProfile === 'string' ? JSON.parse(rawProfile) : rawProfile;
+          const stepsArray = parsed.steps || parsed;
+          if (Array.isArray(stepsArray)) {
+              return stepsArray.map((s: any, idx: number) => ({
+                  id: s.id || String(idx),
+                  name: s.n || s.name || `Rampa ${idx + 1}`,
+                  temperature: s.t !== undefined ? s.t : (s.temperature || 0),
+                  duration: s.d !== undefined ? s.d : (s.duration || 0)
+              }));
+          }
+      } catch(e) {
+          console.error("Failed to parse active_batch_profile", e);
+      }
+      return [];
+  }, [fermenter.profile, fermenter.active_batch_profile]);
+
+  const chartData = React.useMemo(() => {
+      if (settings.chartPoints > 0) {
+          return readings.slice(-settings.chartPoints);
+      }
+      return readings;
+  }, [readings, settings.chartPoints]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsReady(true);
@@ -516,7 +546,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                 {isReady ? (
                     <div style={{ minHeight: '300px', width: '100%', display: 'block' }}>
                         <TemperatureChart 
-                            data={readings} 
+                            data={chartData} 
                             events={fermenter.status === FermenterStatus.IDLE ? [] : events} 
                             onAddEvent={handleAddEvent}
                             onRemoveEvent={handleRemoveEvent}
@@ -532,7 +562,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                     isReady ? (
                         <div style={{ minHeight: '300px', width: '100%', display: 'block' }}>
                             <GravityChart 
-                                data={readings} 
+                                data={chartData} 
                                 og={og} 
                                 fg={fermenter.active_batch_fg || 0} 
                                 events={fermenter.status === FermenterStatus.IDLE ? [] : events} 
@@ -634,7 +664,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                             <FermentationWizard onStartFermentation={handleStartFermentation} />
                         ) : (
                             <FermentationProfile 
-                                steps={fermenter.profile || []} 
+                                steps={parsedProfile} 
                                 currentStepIndex={fermenter.currentStepIndex || 0}
                                 isPaused={fermenter.isPaused || false}
                                 style={fermenter.style}
