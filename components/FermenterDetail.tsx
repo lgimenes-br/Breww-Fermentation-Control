@@ -31,7 +31,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
       abv: 0
   });
 
-  const [readings, setReadings] = useState<Reading[]>(fermenter.readings || []);
+  const [localReadings, setLocalReadings] = useState<Reading[]>(fermenter.readings || []);
   const [events, setEvents] = useState<FermentationEvent[]>(fermenter.events || []);
   const [isReady, setIsReady] = useState(false);
 
@@ -50,7 +50,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
 
   useEffect(() => {
     if (!fermenter.active_batch_id) {
-       setReadings(fermenter.readings || []);
+       setLocalReadings(fermenter.readings || []);
        setEvents(fermenter.events || []);
        return;
     }
@@ -79,7 +79,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
             timestamp: e.recorded_at
         }));
         
-        setReadings(mappedReadings);
+        setLocalReadings(mappedReadings);
         setEvents(mappedEvents);
       } catch (e) {
         console.error("Failed to load batch data", e);
@@ -344,19 +344,19 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
   };
 
   const safeProfile = React.useMemo(() => {
-    let raw = fermenter.profile || (fermenter as any).active_batch_profile || (fermenter.currentDevice as any)?.steps || [];
-    if (typeof raw === 'string') {
-        try { raw = JSON.parse(raw); } catch(e) { raw = []; }
-    }
-    if (!Array.isArray(raw)) return [];
-    
-    return raw.map((step: any, index: number) => ({
-        id: step.id || String(index),
-        name: step.name || step.n || 'Rampa',
-        temperature: parseFloat(step.temperature ?? step.t ?? 0),
-        duration: parseFloat(step.duration ?? step.d ?? 0)
-    }));
-  }, [fermenter.profile, fermenter.currentDevice]);
+       let raw = fermenter.profile || (fermenter as any).active_batch_profile || [];
+       if (typeof raw === 'string') {
+           try { raw = JSON.parse(raw); } catch(e) { raw = []; }
+       }
+       if (!Array.isArray(raw)) return [];
+       
+       return raw.map((step: any, index: number) => ({
+           id: step.id || String(index),
+           name: step.name || step.n || 'Rampa',
+           temperature: parseFloat(step.temperature ?? step.t ?? 0),
+           duration: parseFloat(step.duration ?? step.d ?? 0)
+       }));
+   }, [fermenter.profile, (fermenter as any).active_batch_profile]);
 
   return (
     <div className="p-6 md:p-8 w-full animate-in fade-in duration-500">
@@ -531,7 +531,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                 {isReady ? (
                     <div style={{ minHeight: '300px', width: '100%', display: 'block' }}>
                         <TemperatureChart 
-                            data={[...(fermenter.readings || [])]} 
+                            data={localReadings.length > 0 ? localReadings : fermenter.readings} 
                             events={fermenter.status === FermenterStatus.IDLE ? [] : events} 
                             onAddEvent={handleAddEvent}
                             onRemoveEvent={handleRemoveEvent}
@@ -547,7 +547,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                     isReady ? (
                         <div style={{ minHeight: '300px', width: '100%', display: 'block' }}>
                             <GravityChart 
-                                data={[...(fermenter.readings || [])]} 
+                                data={localReadings.length > 0 ? localReadings : fermenter.readings} 
                                 og={og} 
                                 fg={fermenter.active_batch_fg || 0} 
                                 events={fermenter.status === FermenterStatus.IDLE ? [] : events} 
