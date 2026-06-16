@@ -213,9 +213,12 @@ app.get('/api/public/batch/:token', async (req, res) => {
 
 app.get('/api/devices', authenticateToken, async (req, res) => {
     try {
-        const [rows] = await pool.execute(`SELECT d.*, (d.last_seen > NOW() - INTERVAL 2 MINUTE) as is_online, b.id as active_batch_id, b.name as active_batch_name, b.og as active_batch_og, b.fg as active_batch_fg, b.profile as active_batch_profile FROM devices d LEFT JOIN batches b ON b.device_id = d.id AND b.is_active = 1 WHERE d.user_id = ?`, [req.user.id]);
+        const [rows] = await pool.execute(`SELECT d.*, (d.last_seen > NOW() - INTERVAL 2 MINUTE) as is_online, b.id as active_batch_id, b.name as active_batch_name, b.og as active_batch_og, b.fg as active_batch_fg, b.profile AS active_batch_profile FROM devices d LEFT JOIN batches b ON b.device_id = d.id AND b.is_active = 1 WHERE d.user_id = ?`, [req.user.id]);
         res.json(rows);
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        console.error("Erro na query /devices:", err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.post('/api/devices', authenticateToken, async (req, res) => {
@@ -233,6 +236,15 @@ app.delete('/api/devices/:serial', authenticateToken, async (req, res) => {
         notifyUpdate();
         res.json({ message: 'Removido' });
     } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/debug/schema', async (req, res) => {
+    try {
+        const [cols] = await pool.query("SHOW COLUMNS FROM batches");
+        res.json(cols);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 app.post('/api/batch/start', authenticateToken, async (req, res) => {
