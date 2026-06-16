@@ -18,8 +18,10 @@ export const BrewProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [mqttClient, setMqttClient] = useState<mqtt.MqttClient | null>(null);
 
   // Fetch initial data via REST API
+  const isLoginPage = window.location.pathname === '/login';
   const { data: fermenters = [], isLoading, refetch } = useQuery<Fermenter[]>({
     queryKey: ['fermenters'],
+    enabled: !isLoginPage && !!localStorage.getItem('token'),
     queryFn: async () => {
       try {
         const url = import.meta.env.VITE_API_URL;
