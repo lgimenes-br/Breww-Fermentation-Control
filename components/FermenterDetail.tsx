@@ -173,9 +173,11 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
   const actualOG = Number(fermenter.active_batch_og || 0);
   const actualFG = Number(fermenter.active_batch_fg || 0);
 
-  const abv = actualOG > 0 ? ((actualOG - currentGravity) * 131.25) : 0;
+  const abv = (actualOG > 1.000 && currentGravity >= 1.000 && actualOG > currentGravity) 
+    ? ((actualOG - currentGravity) * 131.25) 
+    : 0;
   
-  const currentAttenuation = actualOG > 1.000 
+  const currentAttenuation = (actualOG > 1.000 && currentGravity >= 1.000 && actualOG > currentGravity) 
     ? ((actualOG - currentGravity) / (actualOG - 1.000)) * 100 
     : 0;
 

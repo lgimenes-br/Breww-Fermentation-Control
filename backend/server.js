@@ -101,9 +101,16 @@ mqttClient.on('message', async (topic, message) => {
                     target = payload.steps[payload.currStep].t;
                 }
                 const currentBatchId = activeBatches[serialCode] || null;
+                
+                let rawGravity = payload.is_sg ?? payload.sg ?? payload.gravity ?? null;
+                let calculatedGravity = rawGravity;
+                if (rawGravity !== null && rawGravity !== undefined && rawGravity > 1.2 && rawGravity < 50) {
+                    calculatedGravity = 1 + (rawGravity / (258.6 - ((rawGravity / 258.2) * 227.1)));
+                }
+
                 await pool.execute(
                     `INSERT INTO telemetry (device_id, batch_id, temp_ferm, temp_amb, target_temp, gravity, battery, status_op, step_name, recorded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-                    [deviceId, currentBatchId, sanitizeNum(payload.ferm, 1), sanitizeNum(payload.amb, 1), sanitizeNum(target, 1), sanitizeNum(payload.is_sg, 3), sanitizeNum(payload.is_bat, 2), payload.statOp, payload.profStat]
+                    [deviceId, currentBatchId, sanitizeNum(payload.ferm, 1), sanitizeNum(payload.amb, 1), sanitizeNum(target, 1), sanitizeNum(calculatedGravity, 3), sanitizeNum(payload.is_bat ?? payload.battery, 2), payload.statOp, payload.profStat]
                 );
                 lastLogTimes[serialCode] = now;
             }

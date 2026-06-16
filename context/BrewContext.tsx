@@ -86,10 +86,20 @@ export const BrewProvider: React.FC<{ children: React.ReactNode }> = ({ children
               else if (payload.opm === 1) mode = DeviceMode.FRIDGE;
               else if (payload.opm === 2) mode = DeviceMode.KEGERATOR;
 
+              // Identify gravity, prioritizing is_sg which is SmartPID/BrewTaurus default, then others
+              let rawGravity = payload.is_sg ?? payload.sg ?? payload.gravity ?? f.currentDevice?.gravity ?? 0;
+              
+              // If rawGravity looks like Plato (between 1.2 and 50), convert to SG
+              let calculatedGravity = rawGravity;
+              if (rawGravity > 1.2 && rawGravity < 50) {
+                 // Formula: SG = 1 + (Plato / (258.6 - ((Plato / 258.2) * 227.1)))
+                 calculatedGravity = 1 + (rawGravity / (258.6 - ((rawGravity / 258.2) * 227.1)));
+              }
+
               // Bloco de segurança: garante que currentDevice sempre exista antes de ler
               const updatedDevice = {
                 ...(f.currentDevice || {}),
-                gravity: payload.gravity ?? payload.sg ?? payload.is_sg ?? f.currentDevice?.gravity ?? 0,
+                gravity: calculatedGravity,
                 temperature: payload.temperature ?? payload.ferm ?? f.currentDevice?.temperature ?? 0,
                 battery: payload.battery ?? payload.is_bat ?? f.currentDevice?.battery ?? 0,
                 angle: payload.tilt ?? payload.angle ?? payload.is_a ?? f.currentDevice?.angle ?? 0,
