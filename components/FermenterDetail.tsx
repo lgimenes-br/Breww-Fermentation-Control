@@ -168,14 +168,15 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
   };
 
   // Calculations
-  const currentGravity = Number(fermenter.currentDevice?.gravity ?? 0);
-  const actualOG = Number(fermenter.active_batch_og ?? 0);
-  const actualFG = Number(fermenter.active_batch_fg ?? 0);
+  const currentGravity = Number(fermenter.currentDevice?.gravity || 0);
+  const actualOG = Number(fermenter.active_batch_og || 0);
+  const actualFG = Number(fermenter.active_batch_fg || 0);
+
+  const abv = actualOG > 0 ? ((actualOG - currentGravity) * 131.25) : 0;
   
-  // Correction: Check if gravity is Plato (e.g., > 1.2 it's probably not SG). 
-  // Wait, if it displays "72.651" it might be the angle, or maybe multiplied by 100.
-  // Actually, SG is typically 1.0xx. If currentGravity > 2, it might be Plato or something else, but the user says the backend *is sending SG*. Wait, if the backend sends SG (like 1.050), why did it display 72.651? 
-  // Maybe in BrewContext or FermenterDetail it was mapping payload.angle? Is there any angle mapping? 
+  const currentAttenuation = actualOG > 1.000 
+    ? ((actualOG - currentGravity) / (actualOG - 1.000)) * 100 
+    : 0;
 
 
   const getStepTimeRemaining = () => {
@@ -263,7 +264,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                     </div>
                     <div className="flex flex-col">
                         <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Set-Point</span>
-                        <span className="text-2xl font-mono text-green-500">{fermenter.targetTemp.toFixed(1)}°C</span>
+                        <span className="text-2xl font-mono text-green-500">{Number(fermenter.targetTemp || 0).toFixed(1)}°C</span>
                     </div>
                 </div>
              </div>
@@ -461,7 +462,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                             <div className="text-center">
                                 <ArrowDown size={16} className="text-neutral-600 mx-auto mb-2" />
                                 <span className="block text-[10px] font-bold text-neutral-600 uppercase mb-1">OG</span>
-                                <span className="block text-sm font-mono text-white">{actualOG.toFixed(3)}</span>
+                                <span className="block text-sm font-mono text-white">{Number(actualOG || 0).toFixed(3)}</span>
                             </div>
                             <div className="text-center">
                                 <Target size={16} className="text-neutral-600 mx-auto mb-2" />
@@ -471,12 +472,12 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                             <div className="text-center">
                                 <Percent size={16} className="text-neutral-600 mx-auto mb-2" />
                                 <span className="block text-[10px] font-bold text-neutral-600 uppercase mb-1">Atenuação</span>
-                                <span className="block text-sm font-mono text-white">{currentAttenuation}%</span>
+                                <span className="block text-sm font-mono text-white">{Number(currentAttenuation || 0).toFixed(0)}%</span>
                             </div>
                             <div className="text-center">
                                 <FlaskConical size={16} className="text-neutral-600 mx-auto mb-2" />
                                 <span className="block text-[10px] font-bold text-neutral-600 uppercase mb-1">ABV Est.</span>
-                                <span className="block text-sm font-mono text-white">{abv}%</span>
+                                <span className="block text-sm font-mono text-white">{Number(abv || 0).toFixed(1)}%</span>
                             </div>
                         </div>
                     </div>
