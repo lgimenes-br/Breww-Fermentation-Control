@@ -18,6 +18,9 @@ jobs:
           node-version: '20'
 
       - name: 3. Construindo o Layout novo (Build)
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_MQTT_BROKER: ${{ secrets.VITE_MQTT_BROKER }}
         run: |
           npm install
           npm run build
