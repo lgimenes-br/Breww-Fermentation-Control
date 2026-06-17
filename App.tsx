@@ -33,14 +33,76 @@ const App: React.FC = () => {
     // podemos liberar o loading após a leitura síncrona
     setIsAuthLoading(false);
   }, []);
-  const [currentView, setCurrentView] = useState<ViewState>('DASHBOARD');
+  const [currentView, setCurrentView] = useState<ViewState>(() => {
+    const path = window.location.pathname;
+    if (path === '/settings') return 'SETTINGS';
+    if (path.startsWith('/history')) return 'HISTORY';
+    return 'DASHBOARD';
+  });
   const [previousView, setPreviousView] = useState<ViewState | null>(null);
-  const [selectedFermenterId, setSelectedFermenterId] = useState<number | null>(null);
+  const [selectedFermenterId, setSelectedFermenterId] = useState<number | null>(() => {
+    const path = window.location.pathname;
+    if (path.startsWith('/fermenter/')) {
+        const id = parseInt(path.split('/')[2]);
+        return isNaN(id) ? null : id;
+    }
+    return null;
+  });
   const [selectedBrew, setSelectedBrew] = useState<FinishedBrew | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isModeMenuOpen, setIsModeMenuOpen] = useState(false);
   const [viewedMode, setViewedMode] = useState<DeviceMode | null>(null);
   const [isPreviewing, setIsPreviewing] = useState(false);
+
+  // Sincroniza a URL com o estado (F5 preservation)
+  useEffect(() => {
+    const handlePopState = () => {
+        const path = window.location.pathname;
+        if (path.startsWith('/fermenter/')) {
+            const id = parseInt(path.split('/')[2]);
+            if (!isNaN(id)) {
+                setSelectedFermenterId(id);
+                setCurrentView('DASHBOARD');
+                setSelectedBrew(null);
+            }
+        } else if (path === '/settings') {
+            setCurrentView('SETTINGS');
+            setSelectedFermenterId(null);
+            setSelectedBrew(null);
+        } else if (path === '/history') {
+            setCurrentView('HISTORY');
+            setSelectedFermenterId(null);
+            setSelectedBrew(null);
+        } else {
+            setCurrentView('DASHBOARD');
+            setSelectedFermenterId(null);
+            setSelectedBrew(null);
+        }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
+    let newPath = '/dashboard';
+    if (currentView === 'SETTINGS') {
+        newPath = '/settings';
+    } else if (currentView === 'HISTORY') {
+        newPath = '/history';
+    } else if (selectedFermenterId) {
+        newPath = `/fermenter/${selectedFermenterId}`;
+    }
+    
+    // Atualiza a URL sem recarregar a página, se estiver diferente e não formos deslogados
+    if (isAuthenticated && window.location.pathname !== newPath) {
+        if (window.location.pathname === '/' || window.location.pathname === '/login') {
+           window.history.replaceState({}, '', newPath);
+        } else {
+           window.history.pushState({}, '', newPath);
+        }
+    }
+  }, [currentView, selectedFermenterId, isAuthenticated]);
 
   useEffect(() => {
     if (selectedFermenterId) {
@@ -157,14 +219,26 @@ const App: React.FC = () => {
     if (authView === 'REGISTER') {
         return (
             <Register 
-                onLogin={() => setIsAuthenticated(true)} 
+                onLogin={() => {
+                    setCurrentView('DASHBOARD');
+                    setSelectedFermenterId(null);
+                    setSelectedBrew(null);
+                    setIsAuthenticated(true);
+                    window.history.pushState({}, '', '/dashboard');
+                }} 
                 onSwitchToLogin={() => setAuthView('LOGIN')} 
             />
         );
     }
     return (
         <Login 
-            onLogin={() => setIsAuthenticated(true)} 
+            onLogin={() => {
+                setCurrentView('DASHBOARD');
+                setSelectedFermenterId(null);
+                setSelectedBrew(null);
+                setIsAuthenticated(true);
+                window.history.pushState({}, '', '/dashboard');
+            }} 
             onSwitchToRegister={() => setAuthView('REGISTER')} 
         />
     );
