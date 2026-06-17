@@ -323,29 +323,35 @@ app.put('/api/batch/:id', authenticateToken, async (req, res) => {
         const [check] = await pool.execute(`SELECT b.id FROM batches b JOIN devices d ON b.device_id = d.id WHERE b.id = ? AND d.user_id = ?`, [req.params.id, req.user.id]);
         if(check.length === 0) return res.status(403).json({error: 'Não autorizado'});
         
-        let updates = [];
-        let values = [];
-        if (req.body.current_step_index !== undefined) {
-             updates.push('current_step_index = ?');
-             values.push(req.body.current_step_index);
+        const { current_step_index, is_paused, profile } = req.body;
+        let updateFields = [];
+        let queryParams = [];
+
+        if (current_step_index !== undefined) {
+            updateFields.push('current_step_index = ?');
+            queryParams.push(current_step_index);
         }
-        if (req.body.is_paused !== undefined) {
-             updates.push('is_paused = ?');
-             values.push(req.body.is_paused ? 1 : 0);
+        if (is_paused !== undefined) {
+            updateFields.push('is_paused = ?');
+            queryParams.push(is_paused ? 1 : 0);
+        }
+        if (profile !== undefined) {
+            updateFields.push('profile = ?');
+            queryParams.push(JSON.stringify(profile)); // Conversão vital para o MySQL
         }
 
-        if (req.body.profile !== undefined) {
-             updates.push('profile = ?');
-             values.push(JSON.stringify(req.body.profile));
-        }
+        if (updateFields.length === 0) return res.json({ message: 'Nenhuma alteração' });
 
-        if (updates.length > 0) {
-            values.push(req.params.id);
-            await pool.execute(`UPDATE batches SET ${updates.join(', ')} WHERE id = ?`, values);
-            notifyUpdate();
-        }
-        res.json({message: 'Atualizado'});
-    } catch(err) { res.status(500).json({error: err.message}); }
+        queryParams.push(req.params.id);
+        const query = `UPDATE batches SET ${updateFields.join(', ')} WHERE id = ?`;
+
+        await pool.execute(query, queryParams);
+        notifyUpdate();
+        res.json({ message: 'Lote atualizado com sucesso' });
+    } catch(err) { 
+        console.error("Erro no PUT /api/batch/:id :", err);
+        res.status(500).json({error: err.message}); 
+    }
 });
 
 app.get('/api/batch/:id/events', authenticateToken, async (req, res) => {

@@ -167,6 +167,9 @@ const App: React.FC = () => {
       }
 
       if (updates.profile !== undefined) {
+         console.log("🛠️ [DEBUG] Iniciando salvamento do perfil...");
+         console.log("Array recebido:", updates.profile);
+         
          // 1. Otimiza o payload para o Arduino/ESP32 (n, t, d)
          const payloadSteps = updates.profile.map((step: any) => ({
              n: step.name || step.n,         
@@ -181,19 +184,23 @@ const App: React.FC = () => {
              currentStep: f.currentStepIndex || 0 
          });
 
-         // 3. Salva a estrutura completa no Banco de Dados para não perder no Reload (F5)
-         if (f.active_batch_id) {
+         const batchId = f.active_batch_id || (f as any).activeBatchId || (f as any).batch_id; // Fallback para garantir que ache o ID
+         console.log("ID do Lote Ativo encontrado:", batchId);
+
+         if (batchId) {
              try {
                  const url = import.meta.env.VITE_API_URL || '';
                  const token = localStorage.getItem('token');
-                 const headers = token ? { Authorization: `Bearer ${token}` } : {};
-                 
-                 await axios.put(`${url}/api/batch/${f.active_batch_id}`, {
+                 console.log("🚀 Disparando PUT para o backend...");
+                 await axios.put(`${url}/api/batch/${batchId}`, {
                      profile: updates.profile
-                 }, { headers });
+                 }, { headers: { Authorization: `Bearer ${token}` } });
+                 console.log("✅ Perfil salvo com sucesso no MySQL!");
              } catch (e) {
-                 console.error('Erro ao salvar perfil no banco:', e);
+                 console.error('❌ Erro na requisição Axios:', e);
              }
+         } else {
+             console.warn("⚠️ ALERTA: Requisição abortada porque batchId está indefinido no Frontend. Objeto fermenter atual:", f);
          }
       }
     }
