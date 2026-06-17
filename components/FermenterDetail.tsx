@@ -279,39 +279,97 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
   };
 
   // Profile Control Handlers
-  const handleTogglePause = () => {
-    onUpdate(fermenter.id, { isPaused: !fermenter.isPaused });
+  const handleTogglePause = async (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    const nextPausedState = !fermenter.isPaused;
+    onUpdate(fermenter.id, { isPaused: nextPausedState });
+
+    if (fermenter.active_batch_id) {
+        try {
+            const url = import.meta.env.VITE_API_URL || '';
+            const token = localStorage.getItem('token');
+            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+            await axios.put(`${url}/api/batch/${fermenter.active_batch_id}`, {
+                is_paused: nextPausedState
+            }, { headers });
+            
+            if (typeof refetchFermenters === 'function') refetchFermenters();
+        } catch (err) {
+            console.error('Erro ao pausar rampa no backend:', err);
+        }
+    }
   };
 
-  const handleNextStep = () => {
+  const handleNextStep = async (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
     if (fermenter.profile && fermenter.currentStepIndex < fermenter.profile.length - 1) {
         const nextIndex = fermenter.currentStepIndex + 1;
         const target = fermenter.profile[nextIndex].temperature;
+        
+        // 1. UI Otimista
         onUpdate(fermenter.id, { currentStepIndex: nextIndex, targetTemp: target });
         
+        // 2. Avisa a placa via MQTT
         handleTriggerUpdate(fermenter.serial_code || String(fermenter.id), {
             type: 'SET_TEMP',
             target,
             opm: 0
         });
+
+        // 3. Salva no MySQL
+        if (fermenter.active_batch_id) {
+            try {
+                const url = import.meta.env.VITE_API_URL || '';
+                const token = localStorage.getItem('token');
+                const headers = token ? { Authorization: `Bearer ${token}` } : {};
+                await axios.put(`${url}/api/batch/${fermenter.active_batch_id}`, {
+                    current_step_index: nextIndex
+                }, { headers });
+                
+                if (typeof refetchFermenters === 'function') refetchFermenters();
+            } catch (err) {
+                console.error('Erro ao avançar rampa no backend:', err);
+            }
+        }
     }
   };
 
-  const handlePreviousStep = () => {
+  const handlePreviousStep = async (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
     if (fermenter.profile && fermenter.currentStepIndex > 0) {
         const prevIndex = fermenter.currentStepIndex - 1;
         const target = fermenter.profile[prevIndex].temperature;
+        
+        // 1. UI Otimista
         onUpdate(fermenter.id, { currentStepIndex: prevIndex, targetTemp: target });
 
+        // 2. Avisa a placa via MQTT
         handleTriggerUpdate(fermenter.serial_code || String(fermenter.id), {
             type: 'SET_TEMP',
             target,
             opm: 0
         });
+
+        // 3. Salva no MySQL
+        if (fermenter.active_batch_id) {
+            try {
+                const url = import.meta.env.VITE_API_URL || '';
+                const token = localStorage.getItem('token');
+                const headers = token ? { Authorization: `Bearer ${token}` } : {};
+                await axios.put(`${url}/api/batch/${fermenter.active_batch_id}`, {
+                    current_step_index: prevIndex
+                }, { headers });
+                
+                if (typeof refetchFermenters === 'function') refetchFermenters();
+            } catch (err) {
+                console.error('Erro ao voltar rampa no backend:', err);
+            }
+        }
     }
   };
 
-  const handleFinishProfile = async () => {
+  const handleFinishProfile = async (e?: React.MouseEvent) => {
+      if (e) e.preventDefault();
       // Moves status to IDLE, stops the profile, resets events, and sets targetTemp to the last step's temp
       const lastStepTemp = fermenter.profile && fermenter.profile.length > 0
           ? fermenter.profile[fermenter.profile.length - 1].temperature
@@ -337,6 +395,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
               const token = localStorage.getItem('token');
               const headers = token ? { Authorization: `Bearer ${token}` } : {};
               await axios.post(`${url}/api/batch/${fermenter.active_batch_id}/finish`, {}, { headers });
+              if (typeof refetchFermenters === 'function') refetchFermenters();
           } catch (e) {
               console.error("Failed to stop batch on backend", e);
           }

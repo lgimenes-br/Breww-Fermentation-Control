@@ -15,10 +15,10 @@ interface FermentationProfileProps {
   fg?: number;
   onUpdateSteps: (newSteps: FermentationStep[]) => void;
   onUpdateGravity?: (og: number, fg: number) => void;
-  onTogglePause: () => void;
-  onNextStep: () => void;
-  onPreviousStep: () => void;
-  onFinishProfile: () => void;
+  onTogglePause: (e?: React.MouseEvent) => void;
+  onNextStep: (e?: React.MouseEvent) => void;
+  onPreviousStep: (e?: React.MouseEvent) => void;
+  onFinishProfile: (e?: React.MouseEvent) => void;
 }
 
 export const FermentationProfile: React.FC<FermentationProfileProps> = ({ 
@@ -252,6 +252,7 @@ export const FermentationProfile: React.FC<FermentationProfileProps> = ({
       {!isEditing && displaySteps.length > 0 && (
           <div className="grid grid-cols-4 gap-2 mt-auto pt-4 border-t border-neutral-800">
              <button 
+                type="button"
                 onClick={onTogglePause}
                 className={`flex flex-col items-center justify-center py-3 rounded-xl transition-all border ${
                     isPaused 
@@ -265,6 +266,7 @@ export const FermentationProfile: React.FC<FermentationProfileProps> = ({
              </button>
 
              <button 
+                type="button"
                 onClick={onPreviousStep}
                 disabled={currentStepIndex === 0}
                 className="flex flex-col items-center justify-center py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 disabled:hover:bg-neutral-800 text-white border border-neutral-700 transition-all"
@@ -275,6 +277,7 @@ export const FermentationProfile: React.FC<FermentationProfileProps> = ({
              </button>
 
              <button 
+                type="button"
                 onClick={onNextStep}
                 disabled={isLastStep}
                 className="flex flex-col items-center justify-center py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 disabled:hover:bg-neutral-800 text-white border border-neutral-700 transition-all"
@@ -285,6 +288,7 @@ export const FermentationProfile: React.FC<FermentationProfileProps> = ({
              </button>
 
              <button 
+                type="button"
                 onClick={onFinishProfile}
                 className="flex flex-col items-center justify-center py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-900/50 transition-all"
                 title="Encerrar Perfil e Fermentação"
