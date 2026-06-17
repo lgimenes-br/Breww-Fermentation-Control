@@ -81,6 +81,7 @@ export interface Fermenter {
   is_online?: number | boolean;
   active_batch_id?: number | null;
   active_batch_name?: string | null;
+  active_batch_style?: string | null;
   active_batch_og?: number | null;
   active_batch_fg?: number | null;
   active_batch_profile?: string | any;

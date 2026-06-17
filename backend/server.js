@@ -220,7 +220,7 @@ app.get('/api/public/batch/:token', async (req, res) => {
 
 app.get('/api/devices', authenticateToken, async (req, res) => {
     try {
-        const [rows] = await pool.execute(`SELECT d.*, (d.last_seen > NOW() - INTERVAL 2 MINUTE) as is_online, b.id as active_batch_id, b.name as active_batch_name, b.og as active_batch_og, b.fg as active_batch_fg, b.profile AS active_batch_profile, b.current_step_index AS active_batch_current_step_index, b.is_paused AS active_batch_is_paused FROM devices d LEFT JOIN batches b ON b.device_id = d.id AND b.is_active = 1 WHERE d.user_id = ?`, [req.user.id]);
+        const [rows] = await pool.execute(`SELECT d.*, (d.last_seen > NOW() - INTERVAL 2 MINUTE) as is_online, b.id as active_batch_id, b.name as active_batch_name, b.style as active_batch_style, b.og as active_batch_og, b.fg as active_batch_fg, b.profile AS active_batch_profile, b.current_step_index AS active_batch_current_step_index, b.is_paused AS active_batch_is_paused FROM devices d LEFT JOIN batches b ON b.device_id = d.id AND b.is_active = 1 WHERE d.user_id = ?`, [req.user.id]);
         res.json(rows);
     } catch (err) {
         console.error("Erro na query /devices:", err);

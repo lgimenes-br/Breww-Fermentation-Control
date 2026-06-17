@@ -43,9 +43,10 @@ export const BrewProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const response = await axios.get(`${url}/api/devices`, { headers });
-        // Map backend fields to frontend types
         return response.data.map((d: any) => ({
             ...d,
+            active_batch_style: d.active_batch_style,
+            style: d.active_batch_style || d.style,
             currentStepIndex: d.active_batch_current_step_index ?? d.currentStepIndex ?? 0,
             isPaused: !!(d.active_batch_is_paused ?? d.isPaused ?? false),
             profile: typeof d.active_batch_profile === 'string' ? JSON.parse(d.active_batch_profile) : d.active_batch_profile
