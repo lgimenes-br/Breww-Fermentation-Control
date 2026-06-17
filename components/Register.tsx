@@ -34,10 +34,14 @@ export const Register: React.FC<RegisterProps> = ({ onLogin, onSwitchToLogin }) 
 
       <div className="bg-neutral-900/80 backdrop-blur-xl border border-neutral-800 p-8 rounded-2xl shadow-2xl w-full max-w-md relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-white text-black border border-white rounded-2xl flex items-center justify-center shadow-lg mb-4 font-black text-3xl">
-             B
+          <div className="flex items-baseline mb-2">
+              <span className="text-4xl font-black text-white tracking-tighter">BREW</span>
+              <div className="relative">
+                  <span className="text-4xl font-black text-white tracking-tighter">W</span>
+                  <div className="absolute top-0 -right-1.5 w-2 h-1.5 bg-white rounded-tr-sm"></div>
+              </div>
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Criar Nova Conta</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight mt-2">Criar Nova Conta</h1>
           <p className="text-neutral-400 text-sm mt-2 text-center">Junte-se à revolução da fermentação inteligente no <span className="text-white font-bold">BREWW</span></p>
         </div>
 
