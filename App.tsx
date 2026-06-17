@@ -20,8 +20,19 @@ type AuthState = 'LOGIN' | 'REGISTER';
 const App: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const { fermenters, handleTriggerUpdate, refetchFermenters } = useBrewContext();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('token'));
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [authView, setAuthView] = useState<AuthState>('LOGIN');
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        setIsAuthenticated(true);
+    }
+    // Como não há validação complexa no backend no load inicial (apenas dependendo de chamadas que levam o 401 se falhar),
+    // podemos liberar o loading após a leitura síncrona
+    setIsAuthLoading(false);
+  }, []);
   const [currentView, setCurrentView] = useState<ViewState>('DASHBOARD');
   const [previousView, setPreviousView] = useState<ViewState | null>(null);
   const [selectedFermenterId, setSelectedFermenterId] = useState<number | null>(null);
@@ -133,6 +144,14 @@ const App: React.FC = () => {
   };
 
   const selectedFermenter = fermenters.find(f => f.id === selectedFermenterId);
+
+  if (isAuthLoading) {
+    return (
+        <div className="flex items-center justify-center h-screen bg-black text-neutral-500">
+            Carregando sessão...
+        </div>
+    );
+  }
 
   if (!isAuthenticated) {
     if (authView === 'REGISTER') {
