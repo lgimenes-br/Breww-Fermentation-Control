@@ -452,10 +452,6 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
   };
 
   useEffect(() => {
-      console.log("DEBUG TOTAL DO FERMENTADOR:", fermenter);
-  }, [fermenter]);
-
-  useEffect(() => {
     if (!fermenter.currentDevice) return;
 
     const newPoint = {
