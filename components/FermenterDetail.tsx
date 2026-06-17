@@ -145,40 +145,52 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
           const token = localStorage.getItem('token');
           const headers = token ? { Authorization: `Bearer ${token}` } : {};
           
-          // 1. Salva no MySQL criando um lote novo
+          // 1. PENEIRA: Remove rampas vazias (sem nome ou com duração zero)
+          const validSteps = steps.filter((step: any) => {
+              const name = step.name || step.n || '';
+              const duration = Number(step.duration ?? step.d ?? 0);
+              return name.trim() !== '' && duration > 0;
+          });
+
+          // 2. Cria o lote no MySQL
           const response = await axios.post(`${url}/api/batches`, {
               device_id: fermenter.id,
               name: formData.name,
               style: formData.style,
               og: formData.og,
               fg: formData.fg,
-              profile: steps
+              profile: validSteps // Envia apenas as rampas preenchidas
           }, { headers });
 
-          // 2. Prepara o payload comprimido para o ESP32
-          const payloadSteps = steps.map((step: any) => ({
+          // Captura o ID real recém-criado pelo banco de dados
+          const newBatchId = response.data.id || response.data.batch_id || response.data.batchId;
+
+          // 3. Prepara o payload para o hardware
+          const payloadSteps = validSteps.map((step: any) => ({
               n: step.name || step.n,         
-              t: Number(step.temperature ?? step.t),  
-              d: Number(step.duration ?? step.d)      
+              t: Number(step.temperature ?? step.t ?? 0),  
+              d: Number(step.duration ?? step.d ?? 0)      
           }));
 
-          // 3. Dispara via MQTT para acordar a placa imediatamente
+          // 4. Dispara a ordem de rádio usando o MQTT
           handleTriggerUpdate(fermenter.serial_code || String(fermenter.id), { 
               type: 'setProfile',
               steps: payloadSteps, 
               currentStep: 0 
           });
 
-          // 4. Atualiza a UI (Fecha modal e aciona onUpdate/Refetch)
+          console.log("✅ Lote iniciado com sucesso! ID:", newBatchId);
+
+          // 5. Atualiza a UI e fecha o modal
           setIsNewBatchModalOpen(false);
-          const target = Number(steps[0]?.temperature || 20);
+          const target = Number(validSteps[0]?.temperature || 20);
           onUpdate(fermenter.id, {
-              active_batch_id: response.data.batchId,
+              active_batch_id: newBatchId,
               active_batch_name: formData.name,
               active_batch_og: formData.og,
               active_batch_fg: formData.fg,
               style: formData.style as any,
-              profile: steps,
+              profile: validSteps,
               status: FermenterStatus.ACTIVE,
               startDate: new Date().toISOString(),
               currentStepIndex: 0,
@@ -186,9 +198,10 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
               targetTemp: target,
               events: []
           });
+          if (refetchFermenters) refetchFermenters(); // Força o painel a buscar os dados atualizados do banco
           
       } catch (e) {
-          console.error('Erro ao iniciar produção:', e);
+          console.error('❌ Erro ao iniciar produção:', e);
       }
   };
 
@@ -381,7 +394,11 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
         name: step.name || step.n || `Rampa ${index + 1}`,
         temperature: parseFloat(step.temperature ?? step.t ?? 0),
         duration: parseFloat(step.duration ?? step.d ?? 0)
-    }));
+    })).filter((step: FermentationStep) => {
+        if (step.duration === 0) return false;
+        if (step.name.startsWith('Rampa') && step.temperature === 0) return false;
+        return true;
+    });
   }, [fermenter]);
 
   const safeTargetTemp = React.useMemo(() => {
