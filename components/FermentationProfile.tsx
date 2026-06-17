@@ -86,7 +86,7 @@ export const FermentationProfile: React.FC<FermentationProfileProps> = ({
 
   return (
     <div className="bg-neutral-900/30 rounded-3xl p-6 border border-neutral-800 backdrop-blur-sm flex flex-col">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center">
         <h3 className="text-neutral-500 text-xs font-bold uppercase tracking-widest">Perfil de Fermentação</h3>
         <button 
             onClick={handleToggleEdit}
@@ -96,47 +96,53 @@ export const FermentationProfile: React.FC<FermentationProfileProps> = ({
         </button>
       </div>
 
-      {(style || volume || startDate || displayOg || displayFg || isEditing) && (
-        <div className="flex flex-wrap items-center gap-4 text-xs text-neutral-500 font-light mb-6 pb-4 border-b border-neutral-800/50">
-            {style && <span className="bg-neutral-900 px-2 py-1 rounded text-neutral-400">{style}</span>}
-            {volume && <span>Vol: {volume}L</span>}
-            {startDate && <span>Início: {new Date(startDate).toLocaleDateString()}</span>}
-            
-            {(displayOg !== undefined || isEditing) && (
-              <div className="flex items-center gap-1">
-                <span>OG:</span>
-                {isEditing ? (
-                  <input 
-                    type="number" 
-                    step="0.001"
-                    value={displayOg || ''}
-                    onChange={(e) => setLocalOg(parseFloat(e.target.value) || 0)}
-                    className="bg-neutral-800 border border-neutral-700 text-white rounded px-1 w-16 outline-none"
-                  />
-                ) : (
-                  <span>{safeFixed(displayOg, 3)}</span>
-                )}
+      {/* Cabeçalho de Informações do Lote */}
+      <div className="flex items-center flex-wrap gap-6 mt-4 mb-6 pb-4 border-b border-neutral-800/50">
+          {/* Etiqueta de Estilo */}
+          {style && (
+              <div className="px-3 py-1.5 bg-neutral-800 text-white text-xs font-bold rounded-lg tracking-wider uppercase">
+                  {style}
               </div>
-            )}
-            
-            {(displayFg !== undefined || isEditing) && (
-              <div className="flex items-center gap-1">
-                <span>FG:</span>
-                {isEditing ? (
+          )}
+
+          {/* Volume */}
+          <div className="flex items-baseline gap-1.5">
+              <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Vol</span>
+              <span className="text-base font-bold text-white">{volume || '20'}L</span>
+          </div>
+
+          {/* OG */}
+          <div className="flex items-baseline gap-1.5">
+              <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest">OG</span>
+              {isEditing ? (
                   <input 
-                    type="number" 
-                    step="0.001"
-                    value={displayFg || ''}
-                    onChange={(e) => setLocalFg(parseFloat(e.target.value) || 0)}
-                    className="bg-neutral-800 border border-neutral-700 text-white rounded px-1 w-16 outline-none"
+                      type="number" 
+                      step="0.001"
+                      value={displayOg || ''}
+                      onChange={(e) => setLocalOg(parseFloat(e.target.value) || 0)}
+                      className="bg-neutral-800 border border-neutral-700 text-white text-sm rounded px-1 py-0.5 w-16 outline-none font-bold"
                   />
-                ) : (
-                  <span>{safeFixed(displayFg, 3)}</span>
-                )}
-              </div>
-            )}
-        </div>
-      )}
+              ) : (
+                  <span className="text-base font-bold text-white">{displayOg ? safeFixed(displayOg, 3) : '--'}</span>
+              )}
+          </div>
+
+          {/* FG */}
+          <div className="flex items-baseline gap-1.5">
+              <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest">FG</span>
+              {isEditing ? (
+                  <input 
+                      type="number" 
+                      step="0.001"
+                      value={displayFg || ''}
+                      onChange={(e) => setLocalFg(parseFloat(e.target.value) || 0)}
+                      className="bg-neutral-800 border border-neutral-700 text-white text-sm rounded px-1 py-0.5 w-16 outline-none font-bold"
+                  />
+              ) : (
+                  <span className="text-base font-bold text-white">{displayFg ? safeFixed(displayFg, 3) : '--'}</span>
+              )}
+          </div>
+      </div>
 
       <div className="space-y-3 relative mb-6">
         {displaySteps.map((step, index) => {
