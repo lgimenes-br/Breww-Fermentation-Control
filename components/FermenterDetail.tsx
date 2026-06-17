@@ -703,6 +703,11 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                     <div className="shrink-0">
                         {fermenter.status === FermenterStatus.IDLE ? (
                             <FermentationWizard onStartFermentation={handleStartFermentation} />
+                        ) : !fermenter.active_batch_id ? (
+                            <div className="flex flex-col items-center justify-center p-8 text-center bg-neutral-900/30 rounded-xl border border-neutral-800 border-dashed">
+                                <p className="text-neutral-400 mb-2">Nenhum lote ativo neste fermentador.</p>
+                                <p className="text-sm text-neutral-500">Para configurar um perfil de rampas, inicie um Novo Lote pelo Dashboard.</p>
+                            </div>
                         ) : (
                             <FermentationProfile 
                                 steps={safeProfile} 
