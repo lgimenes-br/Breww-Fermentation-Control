@@ -8,7 +8,7 @@ import { TemperatureChart } from './TemperatureChart';
 import { GravityChart } from './GravityChart';
 import { GeminiAdvisor } from './GeminiAdvisor';
 import { FermentationProfile } from './FermentationProfile';
-import { FermentationWizard } from './FermentationWizard';
+import { StartBatchModal } from './StartBatchModal';
 import { useSettings } from '../SettingsContext';
 import { useBrewContext } from '../context/BrewContext';
 
@@ -34,6 +34,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
   const [localReadings, setLocalReadings] = useState<Reading[]>(fermenter.readings || []);
   const [events, setEvents] = useState<FermentationEvent[]>(fermenter.events || []);
   const [isReady, setIsReady] = useState(false);
+  const [isNewBatchModalOpen, setIsNewBatchModalOpen] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -138,6 +139,59 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
       });
   };
   
+  const handleStartProduction = async (formData: any, steps: FermentationStep[]) => {
+      try {
+          const url = import.meta.env.VITE_API_URL || '';
+          const token = localStorage.getItem('token');
+          const headers = token ? { Authorization: `Bearer ${token}` } : {};
+          
+          // 1. Salva no MySQL criando um lote novo
+          const response = await axios.post(`${url}/api/batches`, {
+              device_id: fermenter.id,
+              name: formData.name,
+              style: formData.style,
+              og: formData.og,
+              fg: formData.fg,
+              profile: steps
+          }, { headers });
+
+          // 2. Prepara o payload comprimido para o ESP32
+          const payloadSteps = steps.map((step: any) => ({
+              n: step.name || step.n,         
+              t: Number(step.temperature ?? step.t),  
+              d: Number(step.duration ?? step.d)      
+          }));
+
+          // 3. Dispara via MQTT para acordar a placa imediatamente
+          handleTriggerUpdate(fermenter.serial_code || String(fermenter.id), { 
+              type: 'setProfile',
+              steps: payloadSteps, 
+              currentStep: 0 
+          });
+
+          // 4. Atualiza a UI (Fecha modal e aciona onUpdate/Refetch)
+          setIsNewBatchModalOpen(false);
+          const target = Number(steps[0]?.temperature || 20);
+          onUpdate(fermenter.id, {
+              active_batch_id: response.data.batchId,
+              active_batch_name: formData.name,
+              active_batch_og: formData.og,
+              active_batch_fg: formData.fg,
+              style: formData.style as any,
+              profile: steps,
+              status: FermenterStatus.ACTIVE,
+              startDate: new Date().toISOString(),
+              currentStepIndex: 0,
+              isPaused: false,
+              targetTemp: target,
+              events: []
+          });
+          
+      } catch (e) {
+          console.error('Erro ao iniciar produção:', e);
+      }
+  };
+
   const handleUpdateSteps = (newSteps: FermentationStep[]) => {
       onUpdate(fermenter.id, { profile: newSteps });
   };
@@ -701,12 +755,16 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
 
                 {fermenter.mode === DeviceMode.FERMENTER && (
                     <div className="shrink-0">
-                        {fermenter.status === FermenterStatus.IDLE ? (
-                            <FermentationWizard onStartFermentation={handleStartFermentation} />
-                        ) : !fermenter.active_batch_id ? (
-                            <div className="flex flex-col items-center justify-center p-8 text-center bg-neutral-900/30 rounded-xl border border-neutral-800 border-dashed">
-                                <p className="text-neutral-400 mb-2">Nenhum lote ativo neste fermentador.</p>
-                                <p className="text-sm text-neutral-500">Para configurar um perfil de rampas, inicie um Novo Lote pelo Dashboard.</p>
+                        {!fermenter.active_batch_id ? (
+                            <div className="flex flex-col items-center justify-center py-12 border border-neutral-800/50 rounded-2xl bg-neutral-900/20">
+                                <h3 className="text-xs font-bold tracking-widest text-neutral-500 uppercase mb-4">Perfil de Fermentação</h3>
+                                <p className="text-neutral-400 mb-6">Nenhuma produção ativa</p>
+                                <button 
+                                    onClick={() => setIsNewBatchModalOpen(true)}
+                                    className="flex items-center gap-2 px-6 py-3 bg-white text-black font-medium rounded-xl hover:bg-neutral-200 transition-colors"
+                                >
+                                    <Plus size={18} /> Iniciar Nova Produção
+                                </button>
                             </div>
                         ) : (
                             <FermentationProfile 
@@ -739,6 +797,12 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
           <span>VER: V1.0.017 SAFE-BOOT STABLE</span>
           <span>IP: {fermenter.serial_code || '192.168.68.106'}</span>
       </div>
+
+      <StartBatchModal 
+          isOpen={isNewBatchModalOpen}
+          onClose={() => setIsNewBatchModalOpen(false)}
+          onStart={handleStartProduction}
+      />
     </div>
   );
 };

@@ -460,6 +460,23 @@ app.get('/api/export/:serial', authenticateToken, async (req, res) => {
     } catch (err) { res.status(500).send('Erro ao exportar'); }
 });
 
+app.post('/api/batches', authenticateToken, async (req, res) => {
+    const { device_id, name, style, og, fg, profile } = req.body;
+    try {
+        const [devs] = await pool.execute('SELECT id, serial_code FROM devices WHERE id = ? AND user_id = ?', [device_id, req.user.id]);
+        if (devs.length === 0) return res.status(404).json({ error: 'Device não encontrado' });
+        
+        await pool.execute('UPDATE batches SET is_active = 0, ended_at = NOW() WHERE device_id = ? AND is_active = 1', [device_id]);
+        
+        const safeProfile = profile ? JSON.stringify(profile) : JSON.stringify([]);
+        const [result] = await pool.execute('INSERT INTO batches (device_id, name, style, og, fg, profile, is_active, started_at) VALUES (?, ?, ?, ?, ?, ?, 1, NOW())', [device_id, name, style || '', og || null, fg || null, safeProfile]);
+        
+        activeBatches[devs[0].serial_code.trim().toUpperCase()] = result.insertId;
+        notifyUpdate();
+        res.json({ message: 'Criado com sucesso', batchId: result.insertId });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.get('/api/batches', authenticateToken, async (req, res) => {
     try { const [rows] = await pool.execute(`SELECT b.id, b.name, b.style, b.started_at, b.ended_at, b.is_active, b.profile, b.current_step_index, b.is_paused, d.device_name FROM batches b JOIN devices d ON b.device_id = d.id WHERE d.user_id = ? ORDER BY b.started_at DESC`, [req.user.id]); res.json(rows); } catch (err) { res.status(500).json({ error: err.message }); }
 });
