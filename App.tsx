@@ -165,6 +165,37 @@ const App: React.FC = () => {
             opm
          });
       }
+
+      if (updates.profile !== undefined) {
+         // 1. Otimiza o payload para o Arduino/ESP32 (n, t, d)
+         const payloadSteps = updates.profile.map((step: any) => ({
+             n: step.name || step.n,         
+             t: step.temperature ?? step.t,  
+             d: step.duration ?? step.d      
+         }));
+         
+         // 2. Dispara a ordem de rádio para o hardware (Idioma legado)
+         handleTriggerUpdate(f.serial_code || String(f.id), { 
+             type: 'setProfile',
+             steps: payloadSteps, 
+             currentStep: f.currentStepIndex || 0 
+         });
+
+         // 3. Salva a estrutura completa no Banco de Dados para não perder no Reload (F5)
+         if (f.active_batch_id) {
+             try {
+                 const url = import.meta.env.VITE_API_URL || '';
+                 const token = localStorage.getItem('token');
+                 const headers = token ? { Authorization: `Bearer ${token}` } : {};
+                 
+                 await axios.put(`${url}/api/batch/${f.active_batch_id}`, {
+                     profile: updates.profile
+                 }, { headers });
+             } catch (e) {
+                 console.error('Erro ao salvar perfil no banco:', e);
+             }
+         }
+      }
     }
   };
 

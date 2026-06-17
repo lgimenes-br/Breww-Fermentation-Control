@@ -334,6 +334,11 @@ app.put('/api/batch/:id', authenticateToken, async (req, res) => {
              values.push(req.body.is_paused ? 1 : 0);
         }
 
+        if (req.body.profile !== undefined) {
+             updates.push('profile = ?');
+             values.push(JSON.stringify(req.body.profile));
+        }
+
         if (updates.length > 0) {
             values.push(req.params.id);
             await pool.execute(`UPDATE batches SET ${updates.join(', ')} WHERE id = ?`, values);
