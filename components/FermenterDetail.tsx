@@ -283,20 +283,27 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
     if (e) e.preventDefault();
     if (!window.confirm(fermenter.active_batch_is_paused ? 'Deseja retomar a fermentação?' : 'Deseja pausar a fermentação?')) return;
 
-    // 1. MQTT Legado
+    // 1. Mutação Visual Otimista (Silenciosa, sem loading)
+    if (typeof onUpdate === 'function') {
+         onUpdate(fermenter.id, { 
+             active_batch_is_paused: fermenter.active_batch_is_paused ? 0 : 1,
+             isPaused: !fermenter.isPaused 
+         });
+    }
+
+    // 2. MQTT Legado
     handleTriggerUpdate(fermenter.serial_code || String(fermenter.id), { type: 'togglePause' });
 
-    // 2. Banco de Dados MySQL
+    // 3. Persistência em Background
     if (fermenter.active_batch_id) {
-        try {
-            const url = import.meta.env.VITE_API_URL || '';
-            const token = localStorage.getItem('token');
-            const headers = token ? { Authorization: `Bearer ${token}` } : {};
-            await axios.put(`${url}/api/batch/${fermenter.active_batch_id}`, {
-                is_paused: fermenter.active_batch_is_paused ? 0 : 1
-            }, { headers });
-            if (typeof refetchFermenters === 'function') refetchFermenters();
-        } catch (err) { console.error('Erro ao pausar:', err); }
+        const url = import.meta.env.VITE_API_URL || '';
+        const token = localStorage.getItem('token');
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        
+        axios.put(`${url}/api/batch/${fermenter.active_batch_id}`, {
+            is_paused: fermenter.active_batch_is_paused ? 0 : 1
+        }, { headers })
+        .catch(err => console.error('Erro no background put (pausar):', err));
     }
   };
 
@@ -306,20 +313,27 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
 
     const newIndex = Math.min((fermenter.active_batch_current_step_index || 0) + 1, (safeProfile.length - 1 || 0));
 
-    // 1. MQTT Legado (Comando nativo da placa)
+    // 1. Mutação Visual Otimista (Silenciosa, sem loading)
+    if (typeof onUpdate === 'function') {
+         onUpdate(fermenter.id, { 
+             active_batch_current_step_index: newIndex,
+             currentStepIndex: newIndex
+         });
+    }
+
+    // 2. MQTT Legado (Comando nativo da placa)
     handleTriggerUpdate(fermenter.serial_code || String(fermenter.id), { type: 'skipStep' });
 
-    // 2. Banco de Dados MySQL
+    // 3. Persistência em Background
     if (fermenter.active_batch_id) {
-        try {
-            const url = import.meta.env.VITE_API_URL || '';
-            const token = localStorage.getItem('token');
-            const headers = token ? { Authorization: `Bearer ${token}` } : {};
-            await axios.put(`${url}/api/batch/${fermenter.active_batch_id}`, {
-                current_step_index: newIndex
-            }, { headers });
-            if (typeof refetchFermenters === 'function') refetchFermenters();
-        } catch (err) { console.error('Erro ao avançar rampa:', err); }
+        const url = import.meta.env.VITE_API_URL || '';
+        const token = localStorage.getItem('token');
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        
+        axios.put(`${url}/api/batch/${fermenter.active_batch_id}`, {
+            current_step_index: newIndex
+        }, { headers })
+        .catch(err => console.error('Erro no background put (avançar rampa):', err));
     }
   };
 
@@ -332,7 +346,15 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
 
     const newIndex = currentIndex - 1;
 
-    // 1. MQTT Legado (Reenvia o perfil com o currentStep alterado)
+    // 1. Mutação Visual Otimista (Silenciosa, sem loading)
+    if (typeof onUpdate === 'function') {
+         onUpdate(fermenter.id, { 
+             active_batch_current_step_index: newIndex,
+             currentStepIndex: newIndex
+         });
+    }
+
+    // 2. MQTT Legado (Reenvia o perfil com o currentStep alterado)
     const payloadSteps = safeProfile.map((step: any) => ({
         n: step.name || step.n,         
         t: Number(step.temperature ?? step.t ?? 0),  
@@ -345,17 +367,16 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
         currentStep: newIndex 
     });
 
-    // 2. Banco de Dados MySQL
+    // 3. Persistência em Background
     if (fermenter.active_batch_id) {
-        try {
-            const url = import.meta.env.VITE_API_URL || '';
-            const token = localStorage.getItem('token');
-            const headers = token ? { Authorization: `Bearer ${token}` } : {};
-            await axios.put(`${url}/api/batch/${fermenter.active_batch_id}`, {
-                current_step_index: newIndex
-            }, { headers });
-            if (typeof refetchFermenters === 'function') refetchFermenters();
-        } catch (err) { console.error('Erro ao voltar rampa:', err); }
+        const url = import.meta.env.VITE_API_URL || '';
+        const token = localStorage.getItem('token');
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        
+        axios.put(`${url}/api/batch/${fermenter.active_batch_id}`, {
+            current_step_index: newIndex
+        }, { headers })
+        .catch(err => console.error('Erro no background put (voltar rampa):', err));
     }
   };
 
