@@ -281,131 +281,102 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
   // Profile Control Handlers
   const handleTogglePause = async (e?: React.MouseEvent) => {
     if (e) e.preventDefault();
-    const nextPausedState = !fermenter.isPaused;
-    onUpdate(fermenter.id, { isPaused: nextPausedState });
+    if (!window.confirm(fermenter.active_batch_is_paused ? 'Deseja retomar a fermentação?' : 'Deseja pausar a fermentação?')) return;
 
+    // 1. MQTT Legado
+    handleTriggerUpdate(fermenter.serial_code || String(fermenter.id), { type: 'togglePause' });
+
+    // 2. Banco de Dados MySQL
     if (fermenter.active_batch_id) {
         try {
             const url = import.meta.env.VITE_API_URL || '';
             const token = localStorage.getItem('token');
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
             await axios.put(`${url}/api/batch/${fermenter.active_batch_id}`, {
-                is_paused: nextPausedState
+                is_paused: fermenter.active_batch_is_paused ? 0 : 1
             }, { headers });
-            
             if (typeof refetchFermenters === 'function') refetchFermenters();
-        } catch (err) {
-            console.error('Erro ao pausar rampa no backend:', err);
-        }
+        } catch (err) { console.error('Erro ao pausar:', err); }
     }
   };
 
   const handleNextStep = async (e?: React.MouseEvent) => {
     if (e) e.preventDefault();
-    if (fermenter.profile && fermenter.currentStepIndex < fermenter.profile.length - 1) {
-        const nextIndex = fermenter.currentStepIndex + 1;
-        const target = fermenter.profile[nextIndex].temperature;
-        
-        // 1. UI Otimista
-        onUpdate(fermenter.id, { currentStepIndex: nextIndex, targetTemp: target });
-        
-        // 2. Avisa a placa via MQTT
-        handleTriggerUpdate(fermenter.serial_code || String(fermenter.id), {
-            type: 'SET_TEMP',
-            target,
-            opm: 0
-        });
+    if (!window.confirm('Avançar para a próxima etapa?')) return;
 
-        // 3. Salva no MySQL
-        if (fermenter.active_batch_id) {
-            try {
-                const url = import.meta.env.VITE_API_URL || '';
-                const token = localStorage.getItem('token');
-                const headers = token ? { Authorization: `Bearer ${token}` } : {};
-                await axios.put(`${url}/api/batch/${fermenter.active_batch_id}`, {
-                    current_step_index: nextIndex
-                }, { headers });
-                
-                if (typeof refetchFermenters === 'function') refetchFermenters();
-            } catch (err) {
-                console.error('Erro ao avançar rampa no backend:', err);
-            }
-        }
+    const newIndex = Math.min((fermenter.active_batch_current_step_index || 0) + 1, (safeProfile.length - 1 || 0));
+
+    // 1. MQTT Legado (Comando nativo da placa)
+    handleTriggerUpdate(fermenter.serial_code || String(fermenter.id), { type: 'skipStep' });
+
+    // 2. Banco de Dados MySQL
+    if (fermenter.active_batch_id) {
+        try {
+            const url = import.meta.env.VITE_API_URL || '';
+            const token = localStorage.getItem('token');
+            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+            await axios.put(`${url}/api/batch/${fermenter.active_batch_id}`, {
+                current_step_index: newIndex
+            }, { headers });
+            if (typeof refetchFermenters === 'function') refetchFermenters();
+        } catch (err) { console.error('Erro ao avançar rampa:', err); }
     }
   };
 
   const handlePreviousStep = async (e?: React.MouseEvent) => {
     if (e) e.preventDefault();
-    if (fermenter.profile && fermenter.currentStepIndex > 0) {
-        const prevIndex = fermenter.currentStepIndex - 1;
-        const target = fermenter.profile[prevIndex].temperature;
-        
-        // 1. UI Otimista
-        onUpdate(fermenter.id, { currentStepIndex: prevIndex, targetTemp: target });
+    const currentIndex = fermenter.active_batch_current_step_index ?? fermenter.currentStepIndex ?? 0;
+    if (currentIndex === 0) return; // Não pode voltar antes do zero
+    
+    if (!window.confirm('Voltar para a etapa anterior?')) return;
 
-        // 2. Avisa a placa via MQTT
-        handleTriggerUpdate(fermenter.serial_code || String(fermenter.id), {
-            type: 'SET_TEMP',
-            target,
-            opm: 0
-        });
+    const newIndex = currentIndex - 1;
 
-        // 3. Salva no MySQL
-        if (fermenter.active_batch_id) {
-            try {
-                const url = import.meta.env.VITE_API_URL || '';
-                const token = localStorage.getItem('token');
-                const headers = token ? { Authorization: `Bearer ${token}` } : {};
-                await axios.put(`${url}/api/batch/${fermenter.active_batch_id}`, {
-                    current_step_index: prevIndex
-                }, { headers });
-                
-                if (typeof refetchFermenters === 'function') refetchFermenters();
-            } catch (err) {
-                console.error('Erro ao voltar rampa no backend:', err);
-            }
-        }
+    // 1. MQTT Legado (Reenvia o perfil com o currentStep alterado)
+    const payloadSteps = safeProfile.map((step: any) => ({
+        n: step.name || step.n,         
+        t: Number(step.temperature ?? step.t ?? 0),  
+        d: Number(step.duration ?? step.d ?? 0)      
+    }));
+
+    handleTriggerUpdate(fermenter.serial_code || String(fermenter.id), { 
+        type: 'setProfile',
+        steps: payloadSteps, 
+        currentStep: newIndex 
+    });
+
+    // 2. Banco de Dados MySQL
+    if (fermenter.active_batch_id) {
+        try {
+            const url = import.meta.env.VITE_API_URL || '';
+            const token = localStorage.getItem('token');
+            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+            await axios.put(`${url}/api/batch/${fermenter.active_batch_id}`, {
+                current_step_index: newIndex
+            }, { headers });
+            if (typeof refetchFermenters === 'function') refetchFermenters();
+        } catch (err) { console.error('Erro ao voltar rampa:', err); }
     }
   };
 
   const handleFinishProfile = async (e?: React.MouseEvent) => {
       if (e) e.preventDefault();
-      // Moves status to IDLE, stops the profile, resets events, and sets targetTemp to the last step's temp
-      const lastStepTemp = fermenter.profile && fermenter.profile.length > 0
-          ? fermenter.profile[fermenter.profile.length - 1].temperature
-          : fermenter.targetTemp;
+      if (!window.confirm('Deseja realmente finalizar este lote? O histórico será salvo e a placa será liberada.')) return;
 
-      onUpdate(fermenter.id, { 
-          status: FermenterStatus.IDLE, 
-          isPaused: false,
-          currentStepIndex: 0,
-          events: [],
-          targetTemp: lastStepTemp,
-          active_batch_name: null,
-          active_batch_id: null,
-          active_batch_og: null,
-          active_batch_fg: null,
-          profile: []
-      });
-
-      // Also stop it on the backend
       if (fermenter.active_batch_id) {
           try {
               const url = import.meta.env.VITE_API_URL || '';
               const token = localStorage.getItem('token');
               const headers = token ? { Authorization: `Bearer ${token}` } : {};
+              // A rota /finish encerra no BD (is_active = 0)
               await axios.post(`${url}/api/batch/${fermenter.active_batch_id}/finish`, {}, { headers });
-              if (typeof refetchFermenters === 'function') refetchFermenters();
-          } catch (e) {
-              console.error("Failed to stop batch on backend", e);
-          }
-      }
+              
+              // Opcional: Se quiser limpar o painel fisicamente para a placa parar de aquecer/esfriar:
+              handleTriggerUpdate(fermenter.serial_code || String(fermenter.id), { type: 'setProfile', steps: [], currentStep: 0 });
 
-      handleTriggerUpdate(fermenter.serial_code || String(fermenter.id), {
-          type: 'SET_TEMP',
-          target: lastStepTemp,
-          opm: 0
-      });
+              if (typeof refetchFermenters === 'function') refetchFermenters();
+          } catch (err) { console.error('Erro ao finalizar lote:', err); }
+      }
   };
 
   // Kegerator Handlers
