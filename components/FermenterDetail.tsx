@@ -19,7 +19,7 @@ interface FermenterDetailProps {
 
 export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onUpdate }) => {
   const { settings } = useSettings();
-  const { handleTriggerUpdate } = useBrewContext();
+  const { handleTriggerUpdate, refetchFermenters } = useBrewContext();
   
   // Local state for Kegerator Config to handle inputs before saving
   const [kegeratorForm, setKegeratorForm] = useState<KegeratorConfig>({
@@ -181,24 +181,18 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
 
           console.log("✅ Lote iniciado com sucesso! ID:", newBatchId);
 
-          // 5. Atualiza a UI e fecha o modal
-          setIsNewBatchModalOpen(false);
-          const target = Number(validSteps[0]?.temperature || 20);
-          onUpdate(fermenter.id, {
-              active_batch_id: newBatchId,
-              active_batch_name: formData.name,
-              active_batch_og: formData.og,
-              active_batch_fg: formData.fg,
-              style: formData.style as any,
-              profile: validSteps,
-              status: FermenterStatus.ACTIVE,
-              startDate: new Date().toISOString(),
-              currentStepIndex: 0,
-              isPaused: false,
-              targetTemp: target,
-              events: []
-          });
-          if (refetchFermenters) refetchFermenters(); // Força o painel a buscar os dados atualizados do banco
+          // 5. Atualiza a UI
+          setIsNewBatchModalOpen(false); // Fecha o modal primeiro
+          
+          // 6. Recarrega os dados do banco de forma segura
+          if (typeof refetchFermenters === 'function') {
+              refetchFermenters();
+          } else if (typeof onRefresh === 'function') {
+              onRefresh();
+          } else {
+              // Fallback de segurança: recarrega a janela silenciosamente para o React pegar o novo ID do banco
+              window.location.reload();
+          }
           
       } catch (e) {
           console.error('❌ Erro ao iniciar produção:', e);
