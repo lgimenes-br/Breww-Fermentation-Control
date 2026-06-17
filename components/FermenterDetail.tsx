@@ -399,11 +399,15 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
       onUpdate(fermenter.id, { targetTemp: newTemp });
   };
 
+  const profileDep = typeof fermenter.active_batch_profile === 'string'
+      ? fermenter.active_batch_profile
+      : JSON.stringify(fermenter.profile || fermenter.active_batch_profile || fermenter.currentDevice?.steps || fermenter.steps || []);
+
   const safeProfile = React.useMemo(() => {
     let raw = fermenter.profile || 
-              (fermenter as any).active_batch_profile || 
-              (fermenter.currentDevice as any)?.steps || 
-              (fermenter as any).steps;
+              fermenter.active_batch_profile || 
+              fermenter.currentDevice?.steps || 
+              fermenter.steps;
 
     if (typeof raw === 'string') {
         try { raw = JSON.parse(raw); } catch(e) { raw = []; }
@@ -411,7 +415,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
     if (!Array.isArray(raw)) return [];
 
     return raw.map((step: any, index: number) => ({
-        id: step.id || String(index),
+        id: step.id || `step-${index}-${step.n || step.name}`, // Create a more stable unique ID
         name: step.name || step.n || `Rampa ${index + 1}`,
         temperature: parseFloat(step.temperature ?? step.t ?? 0),
         duration: parseFloat(step.duration ?? step.d ?? 0)
@@ -420,7 +424,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
         if (step.name.startsWith('Rampa') && step.temperature === 0) return false;
         return true;
     });
-  }, [fermenter]);
+  }, [profileDep]);
 
   const safeTargetTemp = React.useMemo(() => {
       // Se for fermentador e tiver um perfil ativo, a rampa manda.
@@ -802,6 +806,7 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
                             </div>
                         ) : (
                             <FermentationProfile 
+                                key={fermenter.active_batch_id || 'profile-container'}
                                 steps={safeProfile} 
                                 currentStepIndex={fermenter.currentStepIndex || 0}
                                 isPaused={fermenter.isPaused || false}
