@@ -161,12 +161,14 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
   };
 
   const handleAddEvent = async (event: Omit<FermentationEvent, 'id'>) => {
+    const tempId = Math.random().toString(36).substr(2, 9);
     const newEvent: FermentationEvent = {
         ...event,
-        id: Math.random().toString(36).substr(2, 9)
+        id: tempId
     };
     
     // Optimistic UI
+    const previousEvents = [...events];
     const updatedEvents = [...events, newEvent];
     setEvents(updatedEvents);
     onUpdate(fermenter.id, { events: updatedEvents });
@@ -176,14 +178,24 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
           const url = import.meta.env.VITE_API_URL || '';
           const token = localStorage.getItem('token');
           const headers = token ? { Authorization: `Bearer ${token}` } : {};
-          await axios.post(`${url}/api/events`, {
-              batchId: fermenter.active_batch_id,
+          const response = await axios.post(`${url}/api/batch/${fermenter.active_batch_id}/events`, {
               type: event.type,
               description: event.description,
-              date: event.timestamp
+              timestamp: event.timestamp
           }, { headers });
+          
+          // Sincroniza o ID falso com o ID real do MySQL
+          const realId = response.data.id;
+          if (realId) {
+             const finalEvents = updatedEvents.map(e => e.id === tempId ? { ...e, id: String(realId) } : e);
+             setEvents(finalEvents);
+             onUpdate(fermenter.id, { events: finalEvents });
+          }
        } catch (err) {
           console.error("Failed to add event to backend", err);
+          // Rollback para não mentir para o usuário
+          setEvents(previousEvents);
+          onUpdate(fermenter.id, { events: previousEvents });
        }
     }
   };
@@ -258,15 +270,15 @@ export const FermenterDetail: React.FC<FermenterDetailProps> = ({ fermenter, onU
       });
 
       // Also stop it on the backend
-      try {
-          const url = import.meta.env.VITE_API_URL || '';
-          const token = localStorage.getItem('token');
-          const headers = token ? { Authorization: `Bearer ${token}` } : {};
-          await axios.post(`${url}/api/batch/stop`, {
-              serialCode: fermenter.serial_code || String(fermenter.id),
-          }, { headers });
-      } catch (e) {
-          console.error("Failed to stop batch on backend", e);
+      if (fermenter.active_batch_id) {
+          try {
+              const url = import.meta.env.VITE_API_URL || '';
+              const token = localStorage.getItem('token');
+              const headers = token ? { Authorization: `Bearer ${token}` } : {};
+              await axios.post(`${url}/api/batch/${fermenter.active_batch_id}/finish`, {}, { headers });
+          } catch (e) {
+              console.error("Failed to stop batch on backend", e);
+          }
       }
 
       handleTriggerUpdate(fermenter.serial_code || String(fermenter.id), {

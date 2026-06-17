@@ -130,7 +130,7 @@ const App: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleUpdateFermenter = (id: number, updates: Partial<Fermenter>) => {
+  const handleUpdateFermenter = async (id: number, updates: Partial<Fermenter>) => {
     const f = fermenters.find(f => f.id === id);
     if (f) {
       // Optmistic local update
@@ -138,6 +138,20 @@ const App: React.FC = () => {
         old ? old.map(item => item.id === id ? { ...item, ...updates } : item) : []
       );
       
+      // Sincronização via API para estado do Profile no MySQL: currentStepIndex e isPaused
+      const url = import.meta.env.VITE_API_URL || '';
+      const token = localStorage.getItem('token') || '';
+      if (f.active_batch_id && (updates.currentStepIndex !== undefined || updates.isPaused !== undefined)) {
+          try {
+             await axios.put(`${url}/api/batch/${f.active_batch_id}`, {
+                 current_step_index: updates.currentStepIndex,
+                 is_paused: updates.isPaused
+             }, { headers: { Authorization: `Bearer ${token}` } });
+          } catch (e) {
+             console.error('Erro ao atualizar batch no backend', e);
+          }
+      }
+
       // Se tivermos enviando um novo alvo (targetTemp) ou mudando de modo, dispara via MQTT
       if (updates.targetTemp !== undefined || updates.mode !== undefined) {
          let currentMode = updates.mode || f.mode;

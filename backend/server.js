@@ -42,6 +42,8 @@ const initDb = async () => {
         await pool.execute(`CREATE TABLE IF NOT EXISTS recipes (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, name VARCHAR(100) NOT NULL, style VARCHAR(100), est_og VARCHAR(10), est_fg VARCHAR(10), created_at DATETIME DEFAULT NOW(), FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)`);
         await pool.execute(`CREATE TABLE IF NOT EXISTS recipe_steps (id INT AUTO_INCREMENT PRIMARY KEY, recipe_id INT NOT NULL, step_order INT NOT NULL, name VARCHAR(50), temperature FLOAT, days INT, FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE)`);
         try { await pool.execute(`ALTER TABLE batches ADD COLUMN profile JSON;`); } catch(e) {}
+        try { await pool.execute(`ALTER TABLE batches ADD COLUMN current_step_index INT DEFAULT 0;`); } catch(e) {}
+        try { await pool.execute(`ALTER TABLE batches ADD COLUMN is_paused BOOLEAN DEFAULT FALSE;`); } catch(e) {}
         console.log('✅ [DB] Tabelas verificadas.');
     } catch (e) { console.error('❌ Erro DB Init:', e); }
 };
@@ -218,7 +220,7 @@ app.get('/api/public/batch/:token', async (req, res) => {
 
 app.get('/api/devices', authenticateToken, async (req, res) => {
     try {
-        const [rows] = await pool.execute(`SELECT d.*, (d.last_seen > NOW() - INTERVAL 2 MINUTE) as is_online, b.id as active_batch_id, b.name as active_batch_name, b.og as active_batch_og, b.fg as active_batch_fg, b.profile AS active_batch_profile FROM devices d LEFT JOIN batches b ON b.device_id = d.id AND b.is_active = 1 WHERE d.user_id = ?`, [req.user.id]);
+        const [rows] = await pool.execute(`SELECT d.*, (d.last_seen > NOW() - INTERVAL 2 MINUTE) as is_online, b.id as active_batch_id, b.name as active_batch_name, b.og as active_batch_og, b.fg as active_batch_fg, b.profile AS active_batch_profile, b.current_step_index AS active_batch_current_step_index, b.is_paused AS active_batch_is_paused FROM devices d LEFT JOIN batches b ON b.device_id = d.id AND b.is_active = 1 WHERE d.user_id = ?`, [req.user.id]);
         res.json(rows);
     } catch (err) {
         console.error("Erro na query /devices:", err);
@@ -293,6 +295,51 @@ app.post('/api/events', authenticateToken, async (req, res) => {
         if(check.length === 0) return res.status(403).json({error: 'Não autorizado'});
         await pool.execute('INSERT INTO batch_events (batch_id, event_type, description, recorded_at) VALUES (?, ?, ?, ?)', [req.body.batchId, req.body.type, req.body.description, req.body.date || new Date()]);
         res.status(201).json({message: 'Registrado'});
+    } catch(err) { res.status(500).json({error: err.message}); }
+});
+
+app.post('/api/batch/:id/events', authenticateToken, async (req, res) => {
+    try {
+        const [check] = await pool.execute(`SELECT b.id FROM batches b JOIN devices d ON b.device_id = d.id WHERE b.id = ? AND d.user_id = ?`, [req.params.id, req.user.id]);
+        if(check.length === 0) return res.status(403).json({error: 'Não autorizado'});
+        const [result] = await pool.execute('INSERT INTO batch_events (batch_id, event_type, description, recorded_at) VALUES (?, ?, ?, ?)', [req.params.id, req.body.type, req.body.description, req.body.timestamp || new Date()]);
+        res.status(201).json({message: 'Registrado', id: result.insertId});
+    } catch(err) { res.status(500).json({error: err.message}); }
+});
+
+app.post('/api/batch/:id/finish', authenticateToken, async (req, res) => {
+    try {
+        const [check] = await pool.execute(`SELECT b.id, d.serial_code FROM batches b JOIN devices d ON b.device_id = d.id WHERE b.id = ? AND d.user_id = ?`, [req.params.id, req.user.id]);
+        if(check.length === 0) return res.status(403).json({error: 'Não autorizado'});
+        await pool.execute('UPDATE batches SET is_active = 0, ended_at = NOW() WHERE id = ?', [req.params.id]);
+        delete activeBatches[check[0].serial_code.trim().toUpperCase()];
+        notifyUpdate();
+        res.json({message: 'Finalizado'});
+    } catch(err) { res.status(500).json({error: err.message}); }
+});
+
+app.put('/api/batch/:id', authenticateToken, async (req, res) => {
+    try {
+        const [check] = await pool.execute(`SELECT b.id FROM batches b JOIN devices d ON b.device_id = d.id WHERE b.id = ? AND d.user_id = ?`, [req.params.id, req.user.id]);
+        if(check.length === 0) return res.status(403).json({error: 'Não autorizado'});
+        
+        let updates = [];
+        let values = [];
+        if (req.body.current_step_index !== undefined) {
+             updates.push('current_step_index = ?');
+             values.push(req.body.current_step_index);
+        }
+        if (req.body.is_paused !== undefined) {
+             updates.push('is_paused = ?');
+             values.push(req.body.is_paused ? 1 : 0);
+        }
+
+        if (updates.length > 0) {
+            values.push(req.params.id);
+            await pool.execute(`UPDATE batches SET ${updates.join(', ')} WHERE id = ?`, values);
+            notifyUpdate();
+        }
+        res.json({message: 'Atualizado'});
     } catch(err) { res.status(500).json({error: err.message}); }
 });
 
@@ -403,7 +450,7 @@ app.get('/api/export/:serial', authenticateToken, async (req, res) => {
 });
 
 app.get('/api/batches', authenticateToken, async (req, res) => {
-    try { const [rows] = await pool.execute(`SELECT b.id, b.name, b.style, b.started_at, b.ended_at, b.is_active, b.profile, d.device_name FROM batches b JOIN devices d ON b.device_id = d.id WHERE d.user_id = ? ORDER BY b.started_at DESC`, [req.user.id]); res.json(rows); } catch (err) { res.status(500).json({ error: err.message }); }
+    try { const [rows] = await pool.execute(`SELECT b.id, b.name, b.style, b.started_at, b.ended_at, b.is_active, b.profile, b.current_step_index, b.is_paused, d.device_name FROM batches b JOIN devices d ON b.device_id = d.id WHERE d.user_id = ? ORDER BY b.started_at DESC`, [req.user.id]); res.json(rows); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.delete('/api/batches/:id', authenticateToken, async (req, res) => {
